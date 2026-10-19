@@ -1,0 +1,14 @@
+Pon aquí tus fotos con EXACTAMENTE estos nombres (jpg). Si el archivo no existe, se muestra el espacio vacío del diseño.
+
+hero.jpg                     -> foto grande del inicio
+servicio-paseos.jpg          -> tarjeta "Paseos" (inicio y dashboard)
+servicio-banos.jpg           -> tarjeta "Baño y peluquería" (inicio y dashboard)
+auth.jpg                     -> panel de login y registro
+pro-paseos-petgo.jpg         -> profesional Paseos PetGo
+pro-happy-walk.jpg           -> profesional Happy Walk (resultados y detalle)
+pro-patitas-felices.jpg
+pro-petgo-grooming.jpg
+pro-spa-canino-bogota.jpg
+pro-patas-limpias.jpg
+
+Las fotos de las mascotas no van aquí: se suben desde "Mis mascotas → Subir foto".

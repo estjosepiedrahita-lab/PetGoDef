@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Horario no disponible · PetGo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header class="navbar"><div class="navbar-in">
+  <a class="logo" href="dashboard.html"><span class="paw">🐾</span><span class="name">PetGo</span></a>
+  <nav class="nav-links" aria-label="Principal"><a class="nav-link" href="dashboard.html">Inicio</a><a class="nav-link active" href="servicios.html">Servicios</a><a class="nav-link" href="mis-reservas.html">Mis reservas</a><a class="nav-link" href="mis-mascotas.html">Mis mascotas</a></nav>
+  <div class="nav-actions">
+    <a class="bell" href="notificaciones.html" aria-label="Notificaciones">🔔<span class="count">2</span></a>
+    <a class="profile-pill" href="perfil.html"><span class="avatar js-initial">A</span><span class="js-name">Aiko</span></a>
+  </div>
+</div></header>
+<main>
+
+<div class="col w760">
+  <a class="back" href="reserva-mascota.html">← Volver</a>
+  <div class="steps"><div class="step done"><span class="c">✓</span><span>Mascota</span></div><div class="step-line done"></div><div class="step now"><span class="c">2</span><span>Fecha y hora</span></div><div class="step-line"></div><div class="step "><span class="c">3</span><span>Confirmación</span></div></div>
+  <h2 class="h2">Elige fecha y hora</h2>
+  <div class="alert err"><span class="ic">⚠️</span><span>Este horario ya no está disponible. Selecciona otro.</span></div>
+  
+<div class="dt-grid">
+  <div class="cal" id="calendar">
+    <div class="cal-head"><button type="button" class="cal-nav" id="cal-prev" aria-label="Mes anterior">←</button><span class="mt">Octubre 2026</span><button type="button" class="cal-nav" id="cal-next" aria-label="Mes siguiente">→</button></div>
+    <div class="cal-wd"><div>Do</div><div>Lu</div><div>Ma</div><div>Mi</div><div>Ju</div><div>Vi</div><div>Sá</div></div>
+    <div class="cal-days"></div>
+    <div class="cal-sel"><div class="k">Fecha seleccionada</div><div class="v" id="cal-sel-text">Selecciona una fecha</div></div>
+    <a class="cal-ok" id="cal-ok" href="reserva-confirmacion.html">Confirmar fecha</a>
+  </div>
+  <div class="slots">
+    <div class="tt">Horarios disponibles</div>
+    <div class="grid">
+      <button type="button" class="slot" data-hora="10:00 AM">10:00 AM</button>
+      <div class="slot off" aria-disabled="true">12:00 PM</div>
+      <button type="button" class="slot sel" data-hora="3:00 PM">3:00 PM</button>
+      <button type="button" class="slot" data-hora="5:00 PM">5:00 PM</button>
+    </div>
+    <p class="nt">Los horarios tachados ya no están disponibles.</p>
+  </div>
+</div>
+</div>
+</main>
+
+<script src="js/app.js"></script>
+</body>
+</html>
