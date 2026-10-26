@@ -22,36 +22,13 @@
 
 <div class="page">
   <a class="back" href="servicios.html">← Volver a servicios</a>
-  <div class="title-block"><h1 class="h1">Paseos</h1><p class="sub">3 profesionales disponibles en Bogotá</p></div>
+  <div class="title-block"><h1 class="h1">Paseos</h1><p class="sub" id="paseadores-count">Cargando profesionales...</p></div>
   <div class="chips"><span class="lb">Filtrar por:</span><button type="button" class="chip-f on">📍 Ubicación</button><button type="button" class="chip-f">💲 Precio</button><button type="button" class="chip-f">⭐ Calificación</button></div>
-  <div class="results"><a class="pro-card" href="detalle-paseos.html">
-  <div class="photo" data-img="assets/img/pro-paseos-petgo.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">Paseos PetGo</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.9</span></span><span class="meta">(128 reseñas)</span><span class="meta">📍 Chapinero</span></div>
-    <p class="ds">Paseos profesionales con seguimiento GPS en tiempo real.</p>
-    <div class="r3"><div class="pr"><b>$20.000</b><span>· 30 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a><a class="pro-card" href="detalle-paseos.html">
-  <div class="photo" data-img="assets/img/pro-happy-walk.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">Happy Walk</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.8</span></span><span class="meta">(96 reseñas)</span><span class="meta">📍 Usaquén</span></div>
-    <p class="ds">Paseos personalizados con seguimiento durante el servicio.</p>
-    <div class="r3"><div class="pr"><b>$18.000</b><span>· 30 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a><a class="pro-card" href="detalle-paseos.html">
-  <div class="photo" data-img="assets/img/pro-patitas-felices.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">Patitas Felices</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.7</span></span><span class="meta">(74 reseñas)</span><span class="meta">📍 Suba</span></div>
-    <p class="ds">Paseos grupales e individuales con cuidadores certificados.</p>
-    <div class="r3"><div class="pr"><b>$22.000</b><span>· 45 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a></div>
+  <div class="results" id="paseadores-results" aria-live="polite"></div>
 </div>
 </main>
 
 <script src="js/app.js"></script>
+<script src="js/card.js"></script>
 </body>
 </html>

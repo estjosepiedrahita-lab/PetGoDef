@@ -1,0 +1,51 @@
+[
+  {
+    "nombre": "Paseos PetGo",
+    "estado": "Disponible",
+    "calificacion": "4.9",
+    "resenas": 128,
+    "ubicacion": "Chapinero",
+    "descripcion": "Paseos profesionales con seguimiento GPS en tiempo real.",
+    "precio": "$20.000",
+    "duracion": "30 min",
+    "imagen": "assets/img/pro-paseos-petgo.jpg",
+    "emoji": "🐕"
+  },
+  {
+    "nombre": "Happy Walk",
+    "estado": "Disponible",
+    "calificacion": "4.8",
+    "resenas": 96,
+    "ubicacion": "Usaquén",
+    "descripcion": "Paseos personalizados con seguimiento durante el servicio.",
+    "precio": "$18.000",
+    "duracion": "30 min",
+    "imagen": "assets/img/pro-happy-walk.jpg",
+    "emoji": "🐕"
+  },
+  {
+    "nombre": "Patitas Felices",
+    "estado": "Disponible",
+    "calificacion": "4.7",
+    "resenas": 74,
+    "ubicacion": "Suba",
+    "descripcion": "Paseos grupales e individuales con cuidadores certificados.",
+    "precio": "$22.000",
+    "duracion": "45 min",
+    "imagen": "assets/img/pro-patitas-felices.jpg",
+    "emoji": "🐕"
+  },
+  {
+    "nombre": "Patitas",
+    "estado": "Disponible",
+    "calificacion": "0",
+    "resenas": 10,
+    "ubicacion": "Suba",
+    "descripcion": "Paseos grupales e individuales con cuidadores certificados.",
+    "precio": "$20.000",
+    "duracion": "45 min",
+    "imagen": "assets/img/pro-patitas-felices.jpg",
+    "emoji": "🐕"
+  }
+
+]
