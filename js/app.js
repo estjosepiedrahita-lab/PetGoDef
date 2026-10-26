@@ -513,6 +513,29 @@
     });
   }
 
+  /* ================= Login ================= */
+  var loginForm = $("#login-form");
+  if (loginForm) {
+    var loginStatus = $("#login-status"), loginButton = $("button[type='submit']", loginForm);
+    loginForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      loginStatus.textContent = "";
+      loginButton.disabled = true;
+      fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: $("#l-correo").value.trim(), password: $("#l-pass").value })
+      }).then(function (response) {
+        if (!response.ok) throw new Error("Login failed");
+        location.href = "dashboard.html";
+      }).catch(function () {
+        loginStatus.textContent = "No se pudo iniciar sesión. Verifica tus datos o intenta más tarde.";
+      }).then(function () {
+        loginButton.disabled = false;
+      });
+    });
+  }
+
   /* ================= Registro ================= */
   var reg = $("#btn-register");
   if (reg) {

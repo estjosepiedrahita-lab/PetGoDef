@@ -22,10 +22,13 @@
     <a class="logo" href="index.html"><span class="paw">🐾</span><span class="name">PetGo</span></a>
     <h1>Iniciar sesión</h1>
     <p class="sub">Ingresa a tu cuenta para ver tus reservas</p>
-    <div class="field"><label for="l-correo">Correo</label><input id="l-correo" type="email" placeholder="tu@correo.com" autocomplete="email"><span class="msg"></span></div>
-    <div class="field"><label for="l-pass">Contraseña</label><input id="l-pass" type="password" placeholder="Tu contraseña" autocomplete="current-password"><span class="msg"></span></div>
-    <a class="link-brand" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
-    <a class="btn block" href="dashboard.html">Iniciar sesión</a>
+    <form id="login-form" class="login-form">
+      <div class="field"><label for="l-correo">Correo</label><input id="l-correo" name="email" type="email" placeholder="tu@correo.com" autocomplete="email" required><span class="msg"></span></div>
+      <div class="field"><label for="l-pass">Contraseña</label><input id="l-pass" name="password" type="password" placeholder="Tu contraseña" autocomplete="current-password" required><span class="msg"></span></div>
+      <a class="link-brand" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
+      <button class="btn block" type="submit">Iniciar sesión</button>
+      <p id="login-status" role="status" aria-live="polite"></p>
+    </form>
     <div class="auth-alt"><span>¿No tienes cuenta?</span><a href="registro.html">Regístrate</a></div>
   </div></section>
 </div>

@@ -224,6 +224,7 @@ main { flex: 1; display: flex; flex-direction: column; }
 .auth-art p { font-size: 16px; color: var(--muted); text-align: center; width: min(480px, 100%); }
 .auth-form { display: flex; align-items: center; justify-content: center; padding: 64px; }
 .auth-col { width: 400px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; }
+.login-form { display: flex; flex-direction: column; gap: 16px; }
 .auth-col h1 { font-size: 32px; font-weight: 700; }
 .auth-alt { display: flex; gap: 6px; justify-content: center; font-size: 14px; }
 .auth-alt span { color: var(--muted); }
