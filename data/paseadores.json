@@ -1,7 +1,7 @@
 [
   {
     "nombre": "Paseos PetGo",
-    "estado": "Disponible",
+    "estado": "no disponible",
     "calificacion": "4.9",
     "resenas": 128,
     "ubicacion": "Chapinero",
@@ -37,7 +37,7 @@
   },
   {
     "nombre": "Patitas",
-    "estado": "Disponible",
+    "estado": "No disponible",
     "calificacion": "0",
     "resenas": 10,
     "ubicacion": "Suba",

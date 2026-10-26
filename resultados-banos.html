@@ -22,36 +22,13 @@
 
 <div class="page">
   <a class="back" href="servicios.html">← Volver a servicios</a>
-  <div class="title-block"><h1 class="h1">Baño y peluquería</h1><p class="sub">3 profesionales disponibles en Bogotá</p></div>
+  <div class="title-block"><h1 class="h1">Baño y peluquería</h1><p class="sub" data-card-count>Cargando profesionales...</p></div>
   <div class="chips"><span class="lb">Filtrar por:</span><button type="button" class="chip-f on">📍 Ubicación</button><button type="button" class="chip-f">💲 Precio</button><button type="button" class="chip-f">⭐ Calificación</button></div>
-  <div class="results"><a class="pro-card" href="detalle-banos.html">
-  <div class="photo" data-img="assets/img/pro-petgo-grooming.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">PetGo Grooming</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.9</span></span><span class="meta">(142 reseñas)</span><span class="meta">📍 Chapinero</span></div>
-    <p class="ds">Baño, secado y corte con productos hipoalergénicos.</p>
-    <div class="r3"><div class="pr"><b>$35.000</b><span>· 90 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a><a class="pro-card" href="detalle-banos.html">
-  <div class="photo" data-img="assets/img/pro-spa-canino-bogota.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">Spa Canino Bogotá</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.8</span></span><span class="meta">(88 reseñas)</span><span class="meta">📍 Usaquén</span></div>
-    <p class="ds">Spa completo: baño, corte, limpieza de oídos y uñas.</p>
-    <div class="r3"><div class="pr"><b>$48.000</b><span>· 120 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a><a class="pro-card" href="detalle-banos.html">
-  <div class="photo" data-img="assets/img/pro-patas-limpias.jpg">🐕</div>
-  <div class="body">
-    <div class="r1"><span class="nm">Patas Limpias</span><span class="badge ok">Disponible</span></div>
-    <div class="r2"><span class="stars"><span class="s">★</span><span class="v">4.6</span></span><span class="meta">(51 reseñas)</span><span class="meta">📍 Suba</span></div>
-    <p class="ds">Baño y peluquería a domicilio para perros pequeños.</p>
-    <div class="r3"><div class="pr"><b>$30.000</b><span>· 60 min</span></div><span class="btn sm">Ver detalle</span></div>
-  </div>
-</a></div>
+  <div class="results" data-card-results data-json="../data/Banadores.json" data-detail="detalle-banos.html" data-count-label="profesionales disponibles en Bogotá" aria-live="polite"></div>
 </div>
 </main>
 
 <script src="js/app.js"></script>
+<script src="js/card.js"></script>
 </body>
 </html>

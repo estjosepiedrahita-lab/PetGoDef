@@ -1,0 +1,27 @@
+[
+  {
+    "nombre": "PetGo Grooming",
+    "estado": "No disponible",
+    "calificacion": "4.9",
+    "resenas": 142,
+    "ubicacion": "Chapinero",
+    "descripcion": "Baños y peluquería profesionales para tu mascota.",
+    "precio": "$35.000",
+    "duracion": "90 min",
+    "imagen": "assets/img/pro-banos-petgo.jpg",
+    "emoji": "🐕"
+  },
+  {
+    "nombre": "Spa Canino Bogotá",
+    "estado": "Disponible",
+    "calificacion": "4.8",
+    "resenas": 96,
+    "ubicacion": "Usaquén",
+    "descripcion": "Baños y peluquería profesionales para tu mascota.",
+    "precio": "$18.000",
+    "duracion": "30 min",
+    "imagen": "assets/img/pro-happy-walk.jpg",
+    "emoji": "🐕"
+  }
+
+]

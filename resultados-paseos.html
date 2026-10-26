@@ -22,9 +22,9 @@
 
 <div class="page">
   <a class="back" href="servicios.html">← Volver a servicios</a>
-  <div class="title-block"><h1 class="h1">Paseos</h1><p class="sub" id="paseadores-count">Cargando profesionales...</p></div>
+  <div class="title-block"><h1 class="h1">Paseos</h1><p class="sub" data-card-count>Cargando profesionales...</p></div>
   <div class="chips"><span class="lb">Filtrar por:</span><button type="button" class="chip-f on">📍 Ubicación</button><button type="button" class="chip-f">💲 Precio</button><button type="button" class="chip-f">⭐ Calificación</button></div>
-  <div class="results" id="paseadores-results" aria-live="polite"></div>
+  <div class="results" data-card-results data-json="../data/paseadores.json" data-detail="detalle-paseos.html" data-count-label="profesionales disponibles en Bogotá" aria-live="polite"></div>
 </div>
 </main>
 

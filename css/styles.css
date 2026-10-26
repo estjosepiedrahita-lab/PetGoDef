@@ -115,6 +115,7 @@ main { flex: 1; display: flex; flex-direction: column; }
 .badge.ok { background: var(--exito-fondo); color: var(--exito-texto); }
 .badge.next { background: var(--brand-claro); color: var(--brand-oscuro); }
 .badge.cancel { background: var(--error-fondo); color: var(--error-texto); }
+.badge.unavailable { background: var(--des-fondo); color: var(--des-texto); }
 
 /* ---------- Formularios ---------- */
 .field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
@@ -280,8 +281,8 @@ main { flex: 1; display: flex; flex-direction: column; }
 .chips .lb { font-size: 14px; font-weight: 600; color: var(--muted); }
 .chip-f { padding: 8px 16px; border-radius: 999px; border: 2px solid var(--borde); background: var(--tarjeta); font-weight: 600; font-size: 14px; color: var(--muted); transition: all .15s; }
 .chip-f.on { background: var(--brand-claro); border-color: var(--brand); color: var(--brand); }
-.results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-.pro-card { background: var(--tarjeta); border: 2px solid var(--borde); border-radius: var(--r-tarjeta); box-shadow: var(--sombra-tarjeta); overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 24px; }
+.pro-card { width: 100%; min-width: 0; max-width: 360px; justify-self: center; background: var(--tarjeta); border: 2px solid var(--borde); border-radius: var(--r-tarjeta); box-shadow: var(--sombra-tarjeta); overflow: hidden; display: flex; flex-direction: column; transition: border-color .15s, transform .15s; }
 .pro-card:hover { border-color: var(--brand); transform: translateY(-2px); }
 .pro-card .photo { height: 176px; background: var(--brand-claro); display: grid; place-items: center; font-size: 48px; font-weight: 800; }
 .pro-card .body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 8px; }
