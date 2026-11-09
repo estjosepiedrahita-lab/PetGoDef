@@ -853,3 +853,70 @@ html.a11y-contrast button:focus-visible {
   .home-page .display { font-size: 35px; }
   .home-page .how { gap: 22px 10px; }
 }
+
+
+.cookie-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+
+    width: 90%;
+    max-width: 900px;
+
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+
+    z-index: 9999;
+}
+
+.cookie-texto h2 {
+    font-size: 20px;
+    margin-bottom: 10px;
+}
+
+.cookie-texto p {
+    font-size: 14px;
+    color: #555;
+}
+
+.cookie-botones {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.cookie-botones button {
+    padding: 12px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#aceptar-cookies {
+    background: #2563eb;
+    color: white;
+    border: none;
+}
+
+#rechazar-cookies {
+    background: white;
+    color: #2563eb;
+    border: 2px solid #2563eb;
+}
+
+@media (max-width: 700px) {
+    .cookie-banner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
