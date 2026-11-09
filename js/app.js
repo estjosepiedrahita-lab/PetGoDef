@@ -951,9 +951,71 @@
     });
   }
 
+  /* ================= Menú hamburguesa (móvil) ================= */
+  function setupNavMenu() {
+    var bar = document.querySelector(".navbar-in");
+    var links = document.querySelector(".nav-links");
+    if (!bar || !links || document.getElementById("nav-toggle")) return;
+
+    var btn = document.createElement("button");
+    btn.id = "nav-toggle";
+    btn.className = "nav-toggle";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Abrir menú de navegación");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", "nav-links-menu");
+    btn.innerHTML = "<span></span><span></span><span></span>";
+    links.id = links.id || "nav-links-menu";
+
+    // Insertar el botón antes de las acciones (o al final del navbar-in)
+    var actions = bar.querySelector(".nav-actions") || bar.querySelector(".nav-public");
+    if (actions) bar.insertBefore(btn, actions);
+    else bar.appendChild(btn);
+
+    var overlay = document.createElement("div");
+    overlay.className = "nav-overlay";
+    overlay.id = "nav-overlay";
+    document.body.appendChild(overlay);
+
+    function close() {
+      links.classList.remove("open");
+      overlay.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+      btn.setAttribute("aria-label", "Abrir menú de navegación");
+      document.body.style.overflow = "";
+    }
+    function open() {
+      links.classList.add("open");
+      overlay.classList.add("open");
+      btn.setAttribute("aria-expanded", "true");
+      btn.setAttribute("aria-label", "Cerrar menú de navegación");
+      document.body.style.overflow = "hidden";
+    }
+    function toggle() {
+      if (links.classList.contains("open")) close();
+      else open();
+    }
+
+    btn.addEventListener("click", function (e) {
+      e.stopPropagation();
+      toggle();
+    });
+    overlay.addEventListener("click", close);
+    links.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", close);
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") close();
+    });
+    window.addEventListener("resize", function () {
+      if (window.innerWidth > 900) close();
+    });
+  }
+
   /* ================= Arranque ================= */
   async function boot() {
     setupAccesibilidad();
+    setupNavMenu();
     try {
       var publica = PUBLICAS.indexOf(PAGE) !== -1;
       if (!sb) {

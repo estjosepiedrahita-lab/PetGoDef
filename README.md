@@ -37,7 +37,8 @@ PetGo/
 │   └── 02_oauth_nombre.sql # Ajuste de nombre con OAuth
 ├── README.md
 ├── MANUAL_USUARIO.md
-└── MANUAL_ACCESIBILIDAD.md
+├── MANUAL_ACCESIBILIDAD.md
+└── MANUAL_BASE_DATOS.md    # Esquema Supabase, tablas, RLS y reglas
 ```
 
 ## Requisitos
@@ -74,6 +75,8 @@ Tablas principales:
 | `bookings`       | Reservas                                 |
 | `notifications`  | Notificaciones                           |
 
+Documentación completa (esquema, triggers, RLS, storage y consultas): **[MANUAL_BASE_DATOS.md](MANUAL_BASE_DATOS.md)**.
+
 Para revisar datos: Dashboard de Supabase → **Table Editor** o **SQL Editor**.
 
 ## Accesibilidad
@@ -90,6 +93,7 @@ Detalle en [MANUAL_ACCESIBILIDAD.md](MANUAL_ACCESIBILIDAD.md).
 
 - [Manual de usuario](MANUAL_USUARIO.md) — cómo usar la aplicación
 - [Manual de accesibilidad](MANUAL_ACCESIBILIDAD.md) — opciones de accesibilidad
+- [Manual de base de datos](MANUAL_BASE_DATOS.md) — tablas, RLS, triggers y consultas
 
 ## Rama de trabajo
 
