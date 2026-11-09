@@ -453,3 +453,8 @@ html.booting main { opacity: 0; }
 main { transition: opacity .15s; }
 .toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--texto); color: #fff; padding: 12px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; z-index: 100; max-width: calc(100% - 32px); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
 .toast.err { background: var(--error-boton); }
+
+/* ---------- separador "o" y botones de acceso con otras cuentas ---------- */
+.or { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; width: 100%; }
+.or::before, .or::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
+button.btn:disabled { opacity: .6; cursor: default; }

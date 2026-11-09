@@ -103,7 +103,7 @@
     var u = S.user, meta = u.user_metadata || {};
     var p = rs[0].data || {};
     S.perfil = {
-      nombre: p.nombre || meta.nombre || (u.email || "").split("@")[0],
+      nombre: p.nombre || meta.nombre || meta.full_name || meta.name || (u.email || "").split("@")[0],
       correo: p.correo || u.email || "", telefono: p.telefono || "", ciudad: p.ciudad || "Bogotá"
     };
     S.pets = rs[1].data.map(mapPet);
@@ -232,6 +232,21 @@
       if (!r.data.session) { toast("Cuenta creada. Revisa tu correo para confirmarla y luego inicia sesión."); return; }
       try { sessionStorage.removeItem(BK_KEY); } catch (er) { /* ignorar */ }
       location.href = "estado-usuario-nuevo.html";
+    });
+  }
+
+  /* ================= Entrar con Google (OAuth) ================= */
+  function setupOAuth() {
+    $$("[data-oauth]").forEach(function (b) {
+      b.addEventListener("click", async function () {
+        if (!sb) { fail("No se pudo conectar con el servidor."); return; }
+        b.disabled = true;
+        var r = await sb.auth.signInWithOAuth({
+          provider: b.dataset.oauth,
+          options: { redirectTo: new URL("dashboard.html", location.href).href }
+        });
+        if (r.error) { b.disabled = false; fail("No se pudo iniciar con " + b.dataset.oauth + ": " + r.error.message, r.error); }
+      });
     });
   }
 
@@ -758,7 +773,7 @@
       var publica = PUBLICAS.indexOf(PAGE) !== -1;
       if (!sb) {
         if (!publica) { toast("No se pudo cargar Supabase. Revisa tu conexión.", true); }
-        loadPhotos(); setupLogin(); setupRegistro();
+        loadPhotos(); setupLogin(); setupRegistro(); setupOAuth();
         return;
       }
       var sess = (await sb.auth.getSession()).data.session;
@@ -767,7 +782,7 @@
       if (publica) {
         // Con sesión abierta, el login y el registro llevan directo al panel
         if (sess && (PAGE === "login" || PAGE === "registro") && !query("stay")) { location.replace("dashboard.html"); return; }
-        loadPhotos(); setupLogin(); setupRegistro();
+        loadPhotos(); setupLogin(); setupRegistro(); setupOAuth();
         return;
       }
       // Páginas privadas
