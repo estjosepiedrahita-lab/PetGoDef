@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -22,30 +23,32 @@
 
 <div class="page">
   <a class="back" href="resultados-banos.html">← Volver a resultados</a>
-  <div class="detail">
+  <div class="detail" data-default="petgo-grooming">
     <div class="info">
-      <div class="photo" data-img="assets/img/pro-petgo-grooming.jpg"><span class="e">🐕</span><span class="c">Foto del profesional</span></div>
+      <div class="photo" id="d-photo" data-img="assets/img/pro-petgo-grooming.jpg"><span class="e">🐕</span><span class="c">Foto del profesional</span></div>
       <div class="head">
-        <div class="nm"><h1 class="h1">PetGo Grooming</h1><div class="rt"><span class="stars"><span class="s">★</span><span class="v" style="color:var(--texto)">4.9</span></span><span>(142 reseñas) · Bogotá</span></div></div>
+        <div class="nm"><h1 class="h1" data-d="nombre">PetGo Grooming</h1><div class="rt"><span class="stars"><span class="s">★</span><span class="v" data-d="rating" style="color:var(--texto)">4.9</span></span><span data-d="meta">(142 reseñas) · Bogotá</span></div></div>
         <span class="badge ok">Disponible</span>
       </div>
-      <div class="stats"><div><b>$35.000</b><span>por sesión</span></div><div><b>90 min</b><span>duración</span></div><div><b>Chapinero</b><span>ubicación</span></div></div>
+      <div class="stats"><div><b data-d="precio">$35.000</b><span>por sesión</span></div><div><b data-d="duracion">90 min</b><span>duración</span></div><div><b data-d="zona">Chapinero</b><span>ubicación</span></div></div>
       <div class="h3">Descripción</div>
-      <p class="body-t">Baño, secado y corte con productos hipoalergénicos. Tu mascota queda limpia, cómoda y feliz.</p>
+      <p class="body-t" data-d="detalle">Baño, secado y corte con productos hipoalergénicos. Tu mascota queda limpia, cómoda y feliz.</p>
       <div class="h3">Disponibilidad</div>
-      <p class="body-t">🕒 Lun–Sáb, 8:00 AM – 6:00 PM</p>
+      <p class="body-t">🕒 <span data-d="horario">Lun–Sáb, 8:00 AM – 6:00 PM</span></p>
       <div class="h3">Reseñas recientes</div>
       <div class="reviews"><div class="review"><div class="who"><span class="avatar m">A</span><b>Ana L.</b><span class="stars"><span class="s">★</span><span class="v">4.9</span></span></div><p>Luna quedó hermosa y feliz después de su baño.</p></div><div class="review"><div class="who"><span class="avatar m">J</span><b>Jorge M.</b><span class="stars"><span class="s">★</span><span class="v">4.9</span></span></div><p>Muy buena atención y comunicación constante.</p></div></div>
     </div>
     <aside class="book">
-      <div class="pr">$35.000</div><div class="un">por sesión</div>
-      <a class="btn block" href="reserva-mascota.html" data-reservar data-servicio="Baño y peluquería" data-profesional="PetGo Grooming" data-duracion="90 min" data-precio="$35.000" data-volver="detalle-banos.html">Reservar servicio</a>
+      <div class="pr" data-d="precio">$35.000</div><div class="un">por sesión</div>
+      <a class="btn block" href="reserva-mascota.html" data-reservar data-pro="petgo-grooming" data-servicio="Baño y peluquería" data-profesional="PetGo Grooming" data-duracion="90 min" data-precio="$35.000" data-volver="detalle-banos.html">Reservar servicio</a>
       <div class="fn">Cancelación gratuita hasta 2 horas antes.</div>
     </aside>
   </div>
 </div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

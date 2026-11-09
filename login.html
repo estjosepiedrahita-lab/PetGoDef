@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
 </head>
 <body>
 <main>
@@ -22,18 +23,17 @@
     <a class="logo" href="index.html"><span class="paw">🐾</span><span class="name">PetGo</span></a>
     <h1>Iniciar sesión</h1>
     <p class="sub">Ingresa a tu cuenta para ver tus reservas</p>
-    <form id="login-form" class="login-form">
-      <div class="field"><label for="l-correo">Correo</label><input id="l-correo" name="email" type="email" placeholder="tu@correo.com" autocomplete="email" required><span class="msg"></span></div>
-      <div class="field"><label for="l-pass">Contraseña</label><input id="l-pass" name="password" type="password" placeholder="Tu contraseña" autocomplete="current-password" required><span class="msg"></span></div>
-      <a class="link-brand" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
-      <button class="btn block" type="submit">Iniciar sesión</button>
-      <p id="login-status" role="status" aria-live="polite"></p>
-    </form>
+    <div class="field"><label for="l-correo">Correo</label><input id="l-correo" type="email" placeholder="tu@correo.com" autocomplete="email"><span class="msg"></span></div>
+    <div class="field"><label for="l-pass">Contraseña</label><input id="l-pass" type="password" placeholder="Tu contraseña" autocomplete="current-password"><span class="msg"></span></div>
+    <a class="link-brand" href="#" onclick="return false">¿Olvidaste tu contraseña?</a>
+    <a class="btn block" id="btn-login" href="dashboard.html">Iniciar sesión</a>
     <div class="auth-alt"><span>¿No tienes cuenta?</span><a href="registro.html">Regístrate</a></div>
   </div></section>
 </div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

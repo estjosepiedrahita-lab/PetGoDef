@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
+<script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -37,7 +38,7 @@
     <div class="tt">Horarios disponibles</div>
     <div class="grid">
       <button type="button" class="slot" data-hora="10:00 AM">10:00 AM</button>
-      <a class="slot off" href="estado-horario-ocupado.html" title="Horario no disponible">12:00 PM</a>
+      <button type="button" class="slot" data-hora="12:00 PM">12:00 PM</button>
       <button type="button" class="slot sel" data-hora="3:00 PM">3:00 PM</button>
       <button type="button" class="slot" data-hora="5:00 PM">5:00 PM</button>
     </div>
@@ -47,6 +48,8 @@
 </div>
 </main>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
