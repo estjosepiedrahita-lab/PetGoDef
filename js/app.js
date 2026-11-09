@@ -767,8 +767,193 @@
     });
   }
 
+  /* ================= Accesibilidad (zoom, contraste, lectura en voz alta) ================= */
+  var A11Y_KEY = "petgo_a11y";
+  var A11Y_ZOOMS = [0.9, 1, 1.15, 1.3, 1.5];
+  var a11yState = { zoom: 1, contrast: false };
+  var a11ySpeaking = false;
+
+  function loadA11y() {
+    try {
+      var raw = localStorage.getItem(A11Y_KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (typeof o.zoom === "number") a11yState.zoom = o.zoom;
+        if (typeof o.contrast === "boolean") a11yState.contrast = o.contrast;
+      }
+    } catch (e) { /* ignorar */ }
+  }
+  function saveA11y() {
+    try { localStorage.setItem(A11Y_KEY, JSON.stringify(a11yState)); } catch (e) { /* ignorar */ }
+  }
+  function applyA11y() {
+    document.documentElement.style.setProperty("--a11y-zoom", String(a11yState.zoom));
+    document.documentElement.classList.toggle("a11y-contrast", !!a11yState.contrast);
+    // zoom activo solo cuando no es 1 (para no interferir con layout base)
+    document.body.classList.toggle("a11y-zoom-active", a11yState.zoom !== 1);
+    var levelEl = document.getElementById("a11y-zoom-level");
+    if (levelEl) levelEl.textContent = Math.round(a11yState.zoom * 100) + "%";
+    var sw = document.getElementById("a11y-contrast-sw");
+    if (sw) sw.classList.toggle("on", !!a11yState.contrast);
+  }
+  function setZoom(delta) {
+    var i = A11Y_ZOOMS.indexOf(a11yState.zoom);
+    if (i < 0) i = 1;
+    i = Math.max(0, Math.min(A11Y_ZOOMS.length - 1, i + delta));
+    a11yState.zoom = A11Y_ZOOMS[i];
+    saveA11y();
+    applyA11y();
+  }
+  function toggleContrast() {
+    a11yState.contrast = !a11yState.contrast;
+    saveA11y();
+    applyA11y();
+  }
+  function getPageText() {
+    var main = document.querySelector("main") || document.body;
+    var clone = main.cloneNode(true);
+    // quitar scripts, estilos y el propio panel
+    var remove = clone.querySelectorAll("script, style, #a11y-root, noscript");
+    for (var i = 0; i < remove.length; i++) remove[i].remove();
+    var text = (clone.innerText || clone.textContent || "").replace(/\s+/g, " ").trim();
+    return text.slice(0, 8000); // límite razonable
+  }
+  function stopSpeech() {
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    a11ySpeaking = false;
+    var btn = document.getElementById("a11y-speak");
+    if (btn) btn.textContent = "Leer página";
+  }
+  function toggleSpeech() {
+    if (!window.speechSynthesis) {
+      toast("Tu navegador no soporta lectura en voz alta.", true);
+      return;
+    }
+    if (a11ySpeaking) {
+      stopSpeech();
+      return;
+    }
+    var text = getPageText();
+    if (!text) {
+      toast("No hay texto para leer.", true);
+      return;
+    }
+    stopSpeech();
+    var u = new SpeechSynthesisUtterance(text);
+    u.lang = "es-ES";
+    u.rate = 1;
+    u.onend = function () { a11ySpeaking = false; var b = document.getElementById("a11y-speak"); if (b) b.textContent = "Leer página"; };
+    u.onerror = function () { a11ySpeaking = false; var b = document.getElementById("a11y-speak"); if (b) b.textContent = "Leer página"; };
+    a11ySpeaking = true;
+    var btn = document.getElementById("a11y-speak");
+    if (btn) btn.textContent = "Detener";
+    speechSynthesis.speak(u);
+  }
+  function setupAccesibilidad() {
+    if (document.getElementById("a11y-root")) return;
+    loadA11y();
+    applyA11y();
+
+    var root = h("div");
+    root.id = "a11y-root";
+    root.setAttribute("aria-label", "Herramientas de accesibilidad");
+
+    var toggle = h("button");
+    toggle.id = "a11y-toggle";
+    toggle.type = "button";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-controls", "a11y-panel");
+    toggle.title = "Accesibilidad";
+    toggle.innerHTML = "♿";
+    toggle.addEventListener("click", function () {
+      var panel = document.getElementById("a11y-panel");
+      var open = panel.classList.toggle("open");
+      toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+
+    var panel = h("div");
+    panel.id = "a11y-panel";
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-label", "Opciones de accesibilidad");
+
+    var title = h("h3", null, "Accesibilidad");
+    panel.appendChild(title);
+
+    // Zoom
+    var rowZ = h("div", "a11y-row");
+    rowZ.appendChild(h("span", "a11y-label", "Tamaño del texto"));
+    var ctrZ = h("div", "a11y-controls");
+    var btnMinus = h("button", "a11y-btn", "A−");
+    btnMinus.type = "button";
+    btnMinus.title = "Reducir texto";
+    btnMinus.setAttribute("aria-label", "Reducir tamaño del texto");
+    btnMinus.addEventListener("click", function () { setZoom(-1); });
+    var level = h("span", "a11y-level");
+    level.id = "a11y-zoom-level";
+    level.textContent = Math.round(a11yState.zoom * 100) + "%";
+    var btnPlus = h("button", "a11y-btn", "A+");
+    btnPlus.type = "button";
+    btnPlus.title = "Aumentar texto";
+    btnPlus.setAttribute("aria-label", "Aumentar tamaño del texto");
+    btnPlus.addEventListener("click", function () { setZoom(1); });
+    add(ctrZ, btnMinus, level, btnPlus);
+    rowZ.appendChild(ctrZ);
+    panel.appendChild(rowZ);
+    var hint = h("div", "a11y-hint", "Solo afecta al contenido, no a este panel");
+    panel.appendChild(hint);
+
+    // Contraste
+    var rowC = h("div", "a11y-row");
+    rowC.appendChild(h("span", "a11y-label", "Alto contraste"));
+    var sw = h("button", "a11y-switch");
+    sw.id = "a11y-contrast-sw";
+    sw.type = "button";
+    sw.setAttribute("role", "switch");
+    sw.setAttribute("aria-checked", a11yState.contrast ? "true" : "false");
+    sw.setAttribute("aria-label", "Activar alto contraste");
+    if (a11yState.contrast) sw.classList.add("on");
+    sw.addEventListener("click", function () {
+      toggleContrast();
+      sw.setAttribute("aria-checked", a11yState.contrast ? "true" : "false");
+    });
+    rowC.appendChild(sw);
+    panel.appendChild(rowC);
+
+    // Lectura en voz alta
+    var rowS = h("div", "a11y-row");
+    rowS.appendChild(h("span", "a11y-label", "Lectura en voz alta"));
+    var btnSpeak = h("button", "a11y-btn", "Leer página");
+    btnSpeak.id = "a11y-speak";
+    btnSpeak.type = "button";
+    btnSpeak.setAttribute("aria-label", "Leer el contenido de la página en voz alta");
+    btnSpeak.addEventListener("click", toggleSpeech);
+    rowS.appendChild(btnSpeak);
+    panel.appendChild(rowS);
+
+    root.appendChild(panel);
+    root.appendChild(toggle);
+    document.body.appendChild(root);
+
+    // Cerrar panel al hacer clic fuera
+    document.addEventListener("click", function (e) {
+      if (!root.contains(e.target)) {
+        panel.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+    // Escape cierra el panel
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && panel.classList.contains("open")) {
+        panel.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.focus();
+      }
+    });
+  }
+
   /* ================= Arranque ================= */
   async function boot() {
+    setupAccesibilidad();
     try {
       var publica = PUBLICAS.indexOf(PAGE) !== -1;
       if (!sb) {
