@@ -21,26 +21,19 @@
 </div></header>
 <main>
 
-<div class="page">
-  <div class="head-row">
-    <div class="title-block"><h1 class="h1">Mis mascotas</h1><p class="sub">Gestiona los perfiles de tus mascotas</p></div>
-    <a class="btn sm" id="btn-add" href="#pet-form">+ Agregar mascota</a>
-  </div>
-  <div class="pets-cols">
-    <div class="pet-list" id="pet-list">
-      <div class="pet-row"><div class="card"><div class="icon-box">🐕</div><div class="dt"><b>Max</b><span>Golden Retriever · 3 años</span></div></div><button type="button" class="btn danger sm js-del">Eliminar</button></div>
-      <div class="pet-row"><div class="card"><div class="icon-box">🐩</div><div class="dt"><b>Luna</b><span>Poodle · 2 años</span></div></div><button type="button" class="btn danger sm js-del">Eliminar</button></div>
-    </div>
-    <form class="card pet-form" id="pet-form" novalidate>
-      <div class="tt">Agregar mascota</div>
-      <div class="field"><label for="f-nombre">Nombre</label><input id="f-nombre" type="text" placeholder="Ej: Max" autocomplete="off"><span class="msg">Completa este campo.</span></div>
-      <label class="upload"><span class="ic">📷</span><span class="tx" id="foto-tx">Subir foto</span><input id="f-foto" type="file" accept="image/*"></label>
-      <div class="field"><label for="f-especie">Especie</label><input id="f-especie" type="text" placeholder="Perro" autocomplete="off"></div>
-      <div class="field"><label for="f-raza">Raza</label><input id="f-raza" type="text" placeholder="Ej: Labrador" autocomplete="off"></div>
-      <div class="field"><label for="f-edad">Edad</label><input id="f-edad" type="text" placeholder="Ej: 3 años" autocomplete="off"></div>
-      <button type="submit" class="btn block" id="save-pet">Guardar mascota</button>
-    </form>
-  </div>
+<div class="page pets-page">
+  <div class="head-row"><div class="title-block"><h1 class="h1">Mis mascotas</h1><p class="sub">Gestiona tus mascotas · <span id="pet-count">0 perfiles</span></p></div><button type="button" class="btn sm" id="btn-add">+ Agregar</button></div>
+  <form class="card pet-form" id="pet-form" hidden novalidate>
+    <h2 class="tt" id="pet-form-title">Agregar mascota</h2>
+    <div class="field"><label for="f-especie">Especie</label><select id="f-especie"><option value="Perro">Perro</option><option value="Gato">Gato</option></select></div>
+    <div class="field"><label for="f-nombre">Nombre</label><input id="f-nombre" type="text" maxlength="60" placeholder="Nombre de tu mascota" required></div>
+    <div class="field"><label for="f-raza">Raza</label><input id="f-raza" type="text" maxlength="80" placeholder="Ej: Labrador"></div>
+    <div class="field"><label for="f-edad">Edad (años)</label><input id="f-edad" type="text" placeholder="Ej: 3"></div>
+    <label class="upload"><span class="ic">📷</span><span class="tx" id="foto-tx">Subir foto (opcional)</span><input id="f-foto" type="file" accept="image/*"></label>
+    <div class="pet-actions"><button class="btn sec" type="button" id="cancel-pet">Cancelar</button><button class="btn danger" type="button" id="btn-delete-pet" hidden>Eliminar mascota</button><button class="btn" type="submit" id="save-pet">Guardar mascota</button></div>
+    <p class="demo-note">Cambios de esta pantalla guardados localmente para la demostración.</p>
+  </form>
+  <div class="pet-list" id="pet-list"></div>
 </div>
 </main>
 
