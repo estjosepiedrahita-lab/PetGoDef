@@ -1,0 +1,12 @@
+{
+  "name": "petgo-api",
+  "version": "1.0.0",
+  "description": "API propia de PetGo (Node.js sin dependencias) que usa Supabase como base de datos y para las cuentas.",
+  "private": true,
+  "main": "server.js",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  }
+}

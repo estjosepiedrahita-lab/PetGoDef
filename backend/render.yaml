@@ -1,0 +1,19 @@
+# Despliegue en Render (plan gratis). Render lee este archivo si creas el servicio como "Blueprint".
+services:
+  - type: web
+    name: petgo-api
+    runtime: node
+    rootDir: backend
+    plan: free
+    buildCommand: echo "sin dependencias que instalar"
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: SUPABASE_URL
+        value: https://ylrbqjnxqdeatvqduqrc.supabase.co
+      - key: SUPABASE_KEY
+        sync: false          # se pide al crear el servicio (clave sb_publishable_...)
+      - key: ALLOWED_ORIGINS
+        sync: false          # p. ej. https://petgo.netlify.app,https://estjosepiedrahita-lab.github.io
+      - key: TRUST_PROXY
+        value: "true"

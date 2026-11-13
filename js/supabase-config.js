@@ -5,3 +5,8 @@ window.PETGO_SUPABASE = {
   url: "https://ylrbqjnxqdeatvqduqrc.supabase.co",
   key: "sb_publishable_v0O_G1DxaB5DNHipZbCT7w_xs1znGqh"
 };
+
+/* Dirección de la API propia (backend/). Déjala vacía ("") para que el sitio hable directo con Supabase.
+   Cuando publiques el backend (por ejemplo en Render) pon aquí su dirección, sin barra final:
+   window.PETGO_API_URL = "https://petgo-api.onrender.com"; */
+window.PETGO_API_URL = "";
