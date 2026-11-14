@@ -74,9 +74,10 @@ returns trigger language plpgsql security definer set search_path = '' as $$
 declare b public.businesses%rowtype;
 begin
   if tg_op = 'INSERT' then
-    if new.business_id is null then raise exception 'NEGOCIO_REQUERIDO'; end if;
+    if new.business_id is null then return new; end if;      -- catálogo base (lo carga el administrador)
     new.rating := 0; new.resenas := 0; new.activo := true;
   else
+    if old.business_id is null then return new; end if;
     new.business_id := old.business_id;
     new.rating := old.rating; new.resenas := old.resenas;
   end if;
@@ -88,8 +89,7 @@ begin
 end $$;
 drop trigger if exists offers_guard_t on public.professionals;
 create trigger offers_guard_t before insert or update on public.professionals
-  for each row when (new.business_id is not null or old.business_id is not null)
-  execute function public.offers_guard();
+  for each row execute function public.offers_guard();
 
 -- Si cambia el negocio, se actualizan sus ofertas
 create or replace function public.business_sync_offers()
