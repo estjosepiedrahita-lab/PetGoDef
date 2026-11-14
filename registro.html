@@ -13,23 +13,58 @@
 <body>
 <main>
 
-<div class="auth">
-  <section class="auth-art">
-    <div class="photo" data-img="assets/img/auth.jpg"><span class="e">🐕</span><span class="c">Foto: Golden Retriever feliz</span></div>
-    <h2>Regístrate gratis y cuida a tu mascota</h2>
-    <p>Paseos y baños con profesionales verificados en Bogotá.</p>
-  </section>
-  <section class="auth-form"><div class="auth-col">
+<div class="auth registration-layout" id="registration-wizard">
+  <section class="auth-art registration-art" aria-label="Bienvenida a PetGo">
     <a class="logo" href="index.html"><span class="paw">🐾</span><span class="name">PetGo</span></a>
-    <h1>Crea tu cuenta</h1>
-    <p class="sub">Completa tus datos para empezar</p>
-    <div class="field"><label for="r-nombre">Nombre</label><input id="r-nombre" type="text" placeholder="Tu nombre completo" autocomplete="name"><span class="msg"></span></div>
-    <div class="field"><label for="r-correo">Correo</label><input id="r-correo" type="email" placeholder="tu@correo.com" autocomplete="email"><span class="msg"></span></div>
-    <div class="field"><label for="r-pass">Contraseña</label><input id="r-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"><span class="msg"></span></div>
-    <div class="field"><label for="r-pass2">Confirmar contraseña</label><input id="r-pass2" type="password" placeholder="Repite tu contraseña" autocomplete="new-password"><span class="msg"></span></div>
-    <a class="btn block" id="btn-register" href="estado-usuario-nuevo.html">Crear cuenta</a>
-    <div class="or"><span>o</span></div>
-    <button type="button" class="btn sec block" data-oauth="google">Continuar con Google</button>
+    <div class="registration-art-content">
+      <span class="registration-kicker">Bienvenido a PetGo</span>
+      <h2>Tu mascota merece lo mejor.</h2>
+      <p>Encuentra profesionales de confianza o da a conocer tus servicios en una comunidad que ama a las mascotas.</p>
+      <div class="registration-art-illustration" aria-hidden="true"><span>🐶</span><span>🐱</span></div>
+      <span class="registration-art-foot">Una comunidad, muchas formas de cuidar. 🐾</span>
+    </div>
+  </section>
+  <section class="auth-form registration-form"><div class="auth-col registration-col">
+    <a class="logo registration-mobile-logo" href="index.html"><span class="paw">🐾</span><span class="name">PetGo</span></a>
+    <div class="registration-heading"><span class="registration-eyebrow" id="registration-step-label">PASO 1 DE 3</span><div class="registration-progress" role="progressbar" aria-label="Progreso del registro" aria-valuemin="1" aria-valuemax="3" aria-valuenow="1"><span id="registration-progress-fill"></span></div></div>
+    <div id="registration-step-1" class="registration-step" data-step="1">
+      <div class="registration-step-head"><h1>¿Cómo usarás PetGo?</h1><p class="sub">Elige la opción que mejor te representa.</p></div>
+      <fieldset class="role-chooser registration-options"><legend class="sr-only">Tipo de cuenta</legend>
+        <label class="role-option registration-choice"><input type="radio" name="account-role" value="dueno" checked><span class="registration-choice-icon" aria-hidden="true">🐾</span><span><strong>Busco servicios</strong><small>Quiero encontrar cuidados para mis mascotas</small></span><span class="registration-choice-check" aria-hidden="true">✓</span></label>
+        <label class="role-option registration-choice"><input type="radio" name="account-role" value="proveedor"><span class="registration-choice-icon" aria-hidden="true">🏪</span><span><strong>Ofrezco servicios</strong><small>Soy profesional o tengo una empresa</small></span><span class="registration-choice-check" aria-hidden="true">✓</span></label>
+      </fieldset>
+      <fieldset id="provider-type-choice" class="registration-provider-type" hidden><legend>¿Cómo trabajas?</legend><div class="registration-kind-grid">
+        <label class="registration-kind"><input type="radio" name="provider-type" value="individual" checked><span>👤 <strong>Independiente</strong><small>Trabajo por mi cuenta</small></span></label>
+        <label class="registration-kind"><input type="radio" name="provider-type" value="empresa"><span>👥 <strong>Empresa</strong><small>Somos un equipo</small></span></label>
+      </div></fieldset>
+    </div>
+    <div id="registration-step-2" class="registration-step" data-step="2" hidden>
+      <div class="registration-step-head"><h1>Cuéntanos sobre ti</h1><p class="sub" id="registration-info-subtitle">Necesitamos unos datos básicos para continuar.</p></div>
+      <div class="registration-fields">
+        <div class="field"><label for="r-nombre">Nombre completo</label><input id="r-nombre" type="text" placeholder="Tu nombre" autocomplete="name" maxlength="100"><span class="msg" aria-live="polite"></span></div>
+        <div class="field"><label for="r-correo">Correo electrónico</label><input id="r-correo" type="email" placeholder="tu@correo.com" autocomplete="email" maxlength="254"><span class="msg" aria-live="polite"></span></div>
+      </div>
+      <div id="provider-registration" class="provider-registration registration-provider-fields" hidden>
+        <p class="demo-note">Los perfiles de proveedores se crean solo en este navegador (modo demostración).</p>
+        <div class="registration-fields">
+          <div class="field"><label for="business-name">Nombre profesional o comercial</label><input id="business-name" placeholder="Ej. Paseos Luna" maxlength="80"><span class="msg" aria-live="polite"></span></div>
+          <div class="field"><label for="business-zone">Zona de atención</label><input id="business-zone" placeholder="Ej. Chapinero" maxlength="80"><span class="msg" aria-live="polite"></span></div>
+          <div class="field" id="business-size-row" hidden><label for="business-size">Personas en tu empresa</label><input id="business-size" type="number" min="2" max="500" value="2"><span class="msg" aria-live="polite"></span></div>
+        </div>
+        <label class="sr-only" for="business-desc">Descripción profesional (opcional)</label><textarea id="business-desc" class="sr-only" tabindex="-1" aria-hidden="true" placeholder="Podrás completar esto desde tu panel"></textarea>
+      </div>
+    </div>
+    <div id="registration-step-3" class="registration-step" data-step="3" hidden>
+      <div class="registration-step-head"><h1>Protege tu cuenta</h1><p class="sub">Elige una contraseña segura para finalizar.</p></div>
+      <div class="registration-fields registration-security-fields">
+        <div class="field"><label for="r-pass">Contraseña</label><input id="r-pass" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password"><span class="msg" aria-live="polite"></span></div>
+        <div class="field"><label for="r-pass2">Confirmar contraseña</label><input id="r-pass2" type="password" placeholder="Repite tu contraseña" autocomplete="new-password"><span class="msg" aria-live="polite"></span></div>
+      </div>
+      <p class="registration-final-note" id="registration-final-note">Al crear tu cuenta, continuarás con el proceso de registro de PetGo.</p>
+      <div class="registration-finish-owner owner-only"><div class="or"><span>o</span></div><button type="button" class="btn sec block" data-oauth="google">Continuar con Google</button></div>
+    </div>
+    <p class="registration-page-error" id="registration-page-error" role="alert" hidden></p>
+    <div class="registration-actions"><button type="button" class="btn sec" id="registration-back" hidden>← Atrás</button><button type="button" class="btn" id="registration-next">Continuar →</button><a class="btn" id="btn-register" href="estado-usuario-nuevo.html" hidden>Crear cuenta</a></div>
     <div class="auth-alt"><span>¿Ya tienes cuenta?</span><a href="login.html">Inicia sesión</a></div>
   </div></section>
 </div>
@@ -38,5 +73,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="js/supabase-config.js"></script>
 <script src="js/app.js"></script>
+<script src="js/petgo-extra.js"></script>
 </body>
 </html>

@@ -7,7 +7,7 @@
   var MESES_CAP = MESES.map(function (m) { return m.charAt(0).toUpperCase() + m.slice(1); });
   var LIMITE = 5;
   var BK_KEY = "petgo_booking";
-  var PUBLICAS = ["", "index", "login", "registro", "mapa"];
+  var PUBLICAS = ["", "index", "login", "registro", "mapa", "proveedor-panel"];
 
   function $(sel, root) { return (root || document).querySelector(sel); }
   function $$(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
@@ -26,6 +26,8 @@
     return m ? decodeURIComponent(m[1]) : null;
   }
   var PAGE = (location.pathname.split("/").pop() || "").replace(/\.html$/, "");
+  var DEMO = query("demo") === "1" || (function(){try {return sessionStorage.getItem("petgo_preview") === "1";}catch(e){return false;}})();
+  if (query("demo") === "1") try { sessionStorage.setItem("petgo_preview", "1"); } catch(e) {}
 
   /* ---------- avisos ---------- */
   function toast(msg, isErr) {
@@ -81,6 +83,25 @@
 
   var S = { uid: null, user: null, perfil: { nombre: "", correo: "", telefono: "", ciudad: "Bogotá" }, pets: [], reservas: [], notifs: [], pros: [] };
 
+  function readLocal(key, fallback) { try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+  function loadDemo() {
+    S.uid="demo";
+    S.perfil={nombre:"Usuario de demostración",correo:"demo@petgo.local",telefono:"",ciudad:"Bogotá"};
+    S.pets=[{id:"p-max",nombre:"Max",especie:"Perro",raza:"Golden Retriever",edad:"3",foto:""},{id:"p-luna",nombre:"Luna",especie:"Perro",raza:"Poodle",edad:"2",foto:""}];
+    S.reservas=[];S.notifs=[];
+    S.pros=[
+      {id:"happy-walk",nombre:"Happy Walk",tipo:"individual",servicio:"paseo",precio:18000,duracion_min:30,descripcion:"Paseos individuales y personalizados con acompañamiento durante todo el recorrido.",detalle:"Paseos personalizados para tu mascota.",horario:"Lun–Sáb, 7:00–19:00",zona:"Usaquén",rating:4.8,resenas:96,disponible:true},
+      {id:"paseos-petgo",nombre:"Paseos PetGo",tipo:"empresa",trabajadores:4,servicio:"paseo",precio:20000,duracion_min:30,descripcion:"Paseos supervisados con seguimiento GPS y un equipo de cuidadores.",horario:"Lun–Sáb, 7:00–19:00",zona:"Chapinero",rating:4.9,resenas:128,disponible:true},
+      {id:"patitas-felices",nombre:"Patitas Felices",tipo:"empresa",trabajadores:6,servicio:"paseo",precio:22000,duracion_min:45,descripcion:"Paseos grupales e individuales con paseadores capacitados.",horario:"Lun–Vie, 8:00–17:00",zona:"Suba",rating:4.7,resenas:74,disponible:false},
+      {id:"petgo-grooming",nombre:"PetGo Grooming",tipo:"empresa",trabajadores:3,servicio:"bano",precio:35000,duracion_min:90,descripcion:"Baños y peluquería profesional para mascotas.",horario:"Lun–Sáb, 8:00–18:00",zona:"Chapinero",rating:4.9,resenas:142,disponible:true},
+      {id:"spa-canino",nombre:"Spa Canino Bogotá",tipo:"individual",servicio:"bano",precio:28000,duracion_min:60,descripcion:"Baños individuales con productos suaves y cuidado personalizado.",horario:"Mar–Sáb, 9:00–17:00",zona:"Usaquén",rating:4.8,resenas:96,disponible:true}
+    ];
+    S.pros=S.pros.map(function(p){return Object.assign({},p,readLocal("petgo_offer_"+p.id,{}));});
+    var b=readLocal("petgo_business",null);
+    if(b) readLocal("petgo_business_offers",[]).forEach(function(o){
+      S.pros.push({id:o.id,nombre:b.nombre,tipo:b.tipo,trabajadores:(b.empleados||[]).length,servicio:o.servicio,precio:+o.precio,duracion_min:+o.duracion_min,descripcion:o.descripcion,detalle:o.descripcion,horario:o.horario,zona:b.zona,disponible:o.disponible,rating:0,resenas:0});
+    });
+  }
   /* ================= Capa de datos =================
      Si window.PETGO_API_URL está definido, los datos pasan por la API propia (backend/).
      Si está vacío, el sitio habla directo con Supabase (modo de respaldo). Ambos devuelven {data, error}
@@ -193,7 +214,18 @@
     S.pets = rs[1].data.map(mapPet);
     S.reservas = rs[2].data.map(mapRes);
     S.notifs = rs[3].data.map(mapNotif);
-    S.pros = rs[4].data;
+    S.pros = rs[4].data.map(function (p) {
+      var changes = readLocal("petgo_offer_" + p.id, {});
+      return Object.assign({}, p, changes);
+    });
+    var demo = readLocal("petgo_business", null);
+    if (demo && demo.nombre) {
+      readLocal("petgo_business_offers", []).forEach(function (o) {
+        if (o.activo !== false && !S.pros.some(function (p) { return p.id === o.id; })) {
+          S.pros.push({ id:o.id, nombre:demo.nombre, servicio:o.servicio, precio:Number(o.precio), duracion_min:Number(o.duracion_min), descripcion:o.descripcion, detalle:o.descripcion, zona:demo.zona || "Bogotá", horario:o.horario, disponible:o.disponible, rating:0, resenas:0, tipo:demo.tipo, trabajadores:(demo.empleados || []).length });
+        }
+      });
+    }
   }
 
   /* ---------- consultas sobre los datos cargados ---------- */
@@ -328,6 +360,16 @@
       var ok = true;
       Object.keys(rules).forEach(function (id) { var m = rules[id]($("#" + id).value); setErr(id, m); if (m) ok = false; });
       if (!ok) return;
+      if (document.querySelector('input[name="account-role"]:checked') && document.querySelector('input[name="account-role"]:checked').value === "proveedor") {
+        var tipo = document.querySelector('input[name="provider-type"]:checked').value;
+        var businessName = $("#business-name").value.trim();
+        if (!businessName) { fail("Escribe el nombre comercial o profesional."); return; }
+        if (tipo === "empresa" && (!Number($("#business-size").value) || Number($("#business-size").value) < 2)) { fail("Una empresa debe indicar al menos dos trabajadores."); return; }
+        var business={ tipo:tipo, nombre:businessName, responsable:$("#r-nombre").value.trim(), correo:$("#r-correo").value.trim(), zona:$("#business-zone").value.trim()||"Bogotá", descripcion:$("#business-desc").value.trim(), cantidad:tipo==="empresa"?Number($("#business-size").value):1, empleados:[] };
+        localStorage.setItem("petgo_business",JSON.stringify(business));
+        localStorage.setItem("petgo_business_offers", JSON.stringify([]));
+        location.href="proveedor-panel.html"; return;
+      }
       if (!sb) { fail("No se pudo conectar con el servidor."); return; }
       reg.classList.add("disabled");
       var r = await sb.auth.signUp({
@@ -365,52 +407,52 @@
   }
 
   /* ================= Catálogo: resultados y detalle ================= */
+  function isAvailable(p) { return p.disponible !== false && p.estado !== "No disponible" && p.estado !== "no disponible"; }
+  function providerKind(p) {
+    if (p.tipo === "individual") return "Profesional independiente";
+    if (p.tipo === "empresa") return "Empresa" + (p.trabajadores ? " · " + p.trabajadores + " trabajadores" : "");
+    return /happy.walk|spa.canino/i.test(p.nombre) ? "Profesional independiente" : "Empresa de servicios";
+  }
   function renderResultados() {
-    var box = $("#results");
-    if (!box) return;
+    var box = $("#results"); if (!box) return;
     var svc = /paseos/.test(PAGE) ? "paseo" : "bano";
     var det = svc === "paseo" ? "detalle-paseos.html" : "detalle-banos.html";
-    var list = S.pros.filter(function (p) { return p.servicio === svc; });
-    var cnt = $("#res-count");
-    if (cnt) cnt.textContent = list.length + (list.length === 1 ? " profesional disponible" : " profesionales disponibles") + " en Bogotá";
+    var all = S.pros.filter(function (p) { return p.servicio === svc; });
+    var filter = $("#provider-filter"), order = $("#provider-sort");
+    var list = all.filter(function (p) { return !filter || filter.value === "todos" || (filter.value === "disponibles" ? isAvailable(p) : (filter.value === "individual" ? providerKind(p).includes("independiente") : providerKind(p).includes("Empresa"))); });
+    if (order) list.sort(function (a,b) { return order.value === "precio" ? a.precio-b.precio : order.value === "calificacion" ? b.rating-a.rating : String(a.zona).localeCompare(String(b.zona)); });
+    var cnt = $("#res-count"); if (cnt) cnt.textContent = all.length + " ofertas de " + (svc === "paseo" ? "paseos" : "baño y peluquería") + " en Bogotá. Compara precios, profesionales y disponibilidad.";
     box.innerHTML = "";
-    if (!list.length) {
-      var e = h("div", "empty"), b = h("a", "btn", "Volver a servicios"); b.href = "servicios.html";
-      add(e, h("div", "big", "🔍"), h("div", "tt", "Sin resultados"), h("p", "tx", "Lo sentimos, no encontramos servicios disponibles."), b);
-      box.appendChild(e);
-      return;
-    }
+    if (!list.length) { box.appendChild(h("p", "hist-note", "No hay ofertas para este filtro. Prueba otra opción.")); return; }
     list.forEach(function (p) {
-      var a = h("a", "pro-card"); a.href = det + "?pro=" + encodeURIComponent(p.id);
-      var ph = h("div", "photo", "🐕"); ph.setAttribute("data-img", "assets/img/pro-" + p.id + ".jpg");
-      var body = h("div", "body");
-      var r1 = add(h("div", "r1"), h("span", "nm", p.nombre), h("span", "badge ok", "Disponible"));
-      var st = add(h("span", "stars"), h("span", "s", "★"), h("span", "v", String(p.rating)));
-      var r2 = add(h("div", "r2"), st, h("span", "meta", "(" + p.resenas + " reseñas)"), h("span", "meta", "📍 " + p.zona));
-      var pr = add(h("div", "pr"), h("b", null, money(p.precio)), h("span", null, "· " + p.duracion_min + " min"));
-      var r3 = add(h("div", "r3"), pr, h("span", "btn sm", "Ver detalle"));
-      add(body, r1, r2, h("p", "ds", p.descripcion), r3);
-      add(a, ph, body);
-      box.appendChild(a);
+      var card = h("article", "offer-card");
+      var top = h("div", "offer-top"), ico=h("div", "offer-avatar", svc === "paseo" ? "🐕" : "🛁"), info=h("div", "offer-identity");
+      add(info, h("h2", "offer-name", p.nombre), h("span", "offer-kind", providerKind(p)), h("p", "offer-meta", "⭐ " + (p.resenas ? p.rating + " (" + p.resenas + " reseñas)" : "Nuevo") + "  ·  📍 " + p.zona));
+      add(top, ico, info, h("span", "badge " + (isAvailable(p)?"ok":"no"), isAvailable(p)?"Disponible":"Sin cupos"));
+      var foot=h("div", "offer-bottom"), price=h("div", "offer-price"), link=h("a", "btn sm" + (isAvailable(p)?"":" sec"), isAvailable(p)?"Ver oferta":"Ver perfil");
+      add(price, h("small", null, "Desde"), h("strong", null, money(p.precio)), h("small", null, p.duracion_min + " minutos por sesión"));
+      link.href=det+"?pro="+encodeURIComponent(p.id);
+      add(foot, price, link);
+      add(card,top,h("p","offer-description",p.descripcion),foot); box.appendChild(card);
     });
+    [filter, order].forEach(function (control) { if (control && !control.dataset.bound) { control.dataset.bound="1"; control.addEventListener("change",renderResultados); } });
   }
-
   function renderDetalle() {
-    var root = $(".detail[data-default]");
-    if (!root) return;
-    var p = getPro(query("pro")) || getPro(root.dataset.default);
-    if (!p) return;
-    var vals = {
-      nombre: p.nombre, rating: String(p.rating), meta: "(" + p.resenas + " reseñas) · Bogotá",
-      precio: money(p.precio), duracion: p.duracion_min + " min", zona: p.zona, detalle: p.detalle || p.descripcion, horario: p.horario || ""
-    };
-    $$("[data-d]").forEach(function (el) { el.textContent = vals[el.dataset.d]; });
-    document.title = p.nombre + " · PetGo";
-    $("#d-photo").setAttribute("data-img", "assets/img/pro-" + p.id + ".jpg");
-    var a = $("[data-reservar]");
-    a.dataset.pro = p.id; a.dataset.profesional = p.nombre; a.dataset.duracion = vals.duracion;
-    a.dataset.precio = vals.precio; a.dataset.servicio = servicioNombre(p.servicio);
-    a.dataset.volver = PAGE + ".html?pro=" + encodeURIComponent(p.id);
+    var root = $(".detail[data-default]"); if (!root) return;
+    var p = getPro(query("pro")) || getPro(root.dataset.default); if (!p) return;
+    var vals = { nombre:p.nombre, rating:p.resenas?String(p.rating):"Nuevo", meta:"(" + p.resenas + " reseñas) · Bogotá", precio:money(p.precio), duracion:p.duracion_min+" min", zona:p.zona, detalle:p.detalle||p.descripcion, horario:p.horario||"Consultar disponibilidad" };
+    $$('[data-d]').forEach(function(el) { el.textContent=vals[el.dataset.d]; });
+    document.title=p.nombre+" · PetGo";
+    var type=$("#provider-type"); if(type) type.textContent=providerKind(p);
+    var status=$(".detail .head .badge"); if(status) { status.textContent=isAvailable(p)?"Disponible":"Sin cupos"; status.className="badge "+(isAvailable(p)?"ok":"no"); }
+    var a=$("[data-reservar]");
+    a.dataset.pro=p.id; a.dataset.profesional=p.nombre; a.dataset.duracion=vals.duracion; a.dataset.precio=vals.precio; a.dataset.servicio=servicioNombre(p.servicio); a.dataset.volver=PAGE+".html?pro="+encodeURIComponent(p.id);
+    if(!isAvailable(p)) { a.textContent="Actualmente sin cupos"; a.removeAttribute("href"); a.setAttribute("aria-disabled","true"); a.classList.add("disabled"); }
+    if (DEMO || /^local-/.test(p.id)) {
+      a.textContent="Reserva disponible al conectar el backend";
+      a.removeAttribute("href"); a.setAttribute("aria-disabled","true"); a.classList.add("disabled");
+    }
+    var ph=$("#d-photo"); if(ph) ph.setAttribute("data-img","assets/img/pro-"+p.id+".jpg");
   }
 
   /* ================= Reserva: inicio y mascota ================= */
@@ -731,86 +773,30 @@
 
   /* ================= Mis mascotas ================= */
   function setupMascotas() {
-    var petForm = $("#pet-form");
-    if (!petForm) return;
-    var list = $("#pet-list");
-    var fNombre = $("#f-nombre"), fNombreWrap = fNombre.closest(".field");
-    var fEsp = $("#f-especie"), fRaza = $("#f-raza"), fEdad = $("#f-edad");
-    var fFoto = $("#f-foto"), fotoTx = $("#foto-tx"), fotoBlob = null, saving = false;
-
-    function renderPets() {
-      list.innerHTML = "";
-      if (!S.pets.length) list.appendChild(h("p", "hist-note", "Aún no tienes mascotas. Agrega la primera con el formulario."));
-      S.pets.forEach(function (p) {
-        var row = h("div", "pet-row"), card = h("div", "card"), dt = h("div", "dt");
-        add(dt, h("b", null, p.nombre), h("span", null, petSub(p)));
-        add(card, petIcon(p), dt);
-        var del = h("button", "btn danger sm js-del", "Eliminar"); del.type = "button";
-        del.addEventListener("click", async function () {
-          if (!confirm("¿Eliminar a " + p.nombre + "?")) return;
-          del.disabled = true;
-          var r = await D.pets.remove(p.id);
-          if (r.error) { del.disabled = false; fail("No se pudo eliminar la mascota.", r.error); return; }
-          if (p.path) sb.storage.from("pet-photos").remove([p.path]);
-          S.pets = S.pets.filter(function (x) { return x.id !== p.id; });
-          renderPets();
-        });
-        add(row, card, del);
-        list.appendChild(row);
+    var form=$("#pet-form"); if(!form) return;
+    var list=$("#pet-list"), addBtn=$("#btn-add"), fNombre=$("#f-nombre"), fEsp=$("#f-especie"), fRaza=$("#f-raza"), fEdad=$("#f-edad"), fFoto=$("#f-foto"), photoLabel=$("#foto-tx");
+    var currentId=null, photoData="";
+    var key="petgo_pets_demo_"+(S.uid||"guest");
+    var demo=readLocal(key,{ added:[], edits:{}, deleted:[] });
+    function allPets() { return S.pets.filter(function(p){return demo.deleted.indexOf(p.id)<0;}).map(function(p){return Object.assign({},p,demo.edits[p.id]||{});}).concat(demo.added); }
+    function persist() { try { localStorage.setItem(key,JSON.stringify(demo)); } catch(e){toast("El almacenamiento local está lleno. Prueba sin fotografía.",true);} }
+    function close() {form.hidden=true; currentId=null; form.reset(); photoData=""; photoLabel.textContent="Subir foto (opcional)";}
+    function open(p) {form.hidden=false;currentId=p?p.id:null; $("#pet-form-title").textContent=p?"Editar a "+p.nombre:"Agregar mascota"; $("#save-pet").textContent=p?"Guardar cambios":"Guardar mascota"; $("#btn-delete-pet").hidden=!p; fNombre.value=p?p.nombre:"";fEsp.value=p?p.especie||"Perro":"Perro";fRaza.value=p?p.raza||"":"";fEdad.value=p?p.edad||"":"";photoData=p?p.foto||"":""; form.scrollIntoView({behavior:"smooth",block:"start"}); fNombre.focus({preventScroll:true});}
+    function render() {
+      list.innerHTML=""; var pets=allPets(); var count=$("#pet-count");if(count) count.textContent=pets.length+" perfiles";
+      if(!pets.length) list.appendChild(h("p","hist-note","Todavía no tienes mascotas. Pulsa Agregar para crear un perfil."));
+      pets.forEach(function(p){
+        var row=h("div","pet-line"), info=h("div","pet-line-info"), edit=h("button","btn sec sm","Editar");edit.type="button";
+        add(info,h("strong",null,p.nombre),h("span",null,(p.raza||p.especie||"Mascota")+" · "+(p.edad||"Edad no indicada")+" · "+(p.especie||"Perro")));
+        edit.addEventListener("click",function(){open(p);}); add(row,petIcon(p),info,edit); list.appendChild(row);
       });
     }
-    renderPets();
-
-    fNombre.addEventListener("input", function () { fNombreWrap.classList.remove("error"); });
-
-    // La foto se reduce (máx. 640 px) antes de subirla.
-    fFoto.addEventListener("change", function () {
-      var f = fFoto.files && fFoto.files[0];
-      fotoBlob = null;
-      if (!f) { fotoTx.textContent = "Subir foto"; return; }
-      fotoTx.textContent = f.name;
-      var url = URL.createObjectURL(f), im = new Image();
-      im.onload = function () {
-        var k = Math.min(1, 640 / Math.max(im.width, im.height));
-        var cv = document.createElement("canvas");
-        cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
-        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
-        cv.toBlob(function (b) { fotoBlob = b; }, "image/jpeg", 0.85);
-        URL.revokeObjectURL(url);
-      };
-      im.onerror = function () { fotoTx.textContent = "Subir foto"; toast("No se pudo leer esa imagen.", true); };
-      im.src = url;
-    });
-
-    $("#btn-add").addEventListener("click", function (e) {
-      e.preventDefault();
-      fNombre.scrollIntoView({ behavior: "smooth", block: "center" });
-      fNombre.focus({ preventScroll: true });
-    });
-
-    async function savePet() {
-      if (saving) return;
-      var nombre = fNombre.value.trim();
-      if (!nombre) { fNombreWrap.classList.add("error"); fNombre.focus(); return; }
-      saving = true;
-      var btn = $("#save-pet"); btn.classList.add("disabled");
-      try {
-        var path = null;
-        if (fotoBlob) {
-          path = S.uid + "/" + uuid() + ".jpg";
-          var up = await sb.storage.from("pet-photos").upload(path, fotoBlob, { contentType: "image/jpeg" });
-          if (up.error) { fail("No se pudo subir la foto.", up.error); path = null; }
-        }
-        var esp = fEsp.value.trim() || "Perro";
-        var r = await D.pets.create({ nombre: nombre, especie: esp, raza: fRaza.value.trim() || esp, edad: fEdad.value.trim() || null, foto_path: path });
-        if (r.error) { fail("No se pudo guardar la mascota.", r.error); return; }
-        S.pets.push(mapPet(r.data));
-        fNombre.value = ""; fEsp.value = ""; fRaza.value = ""; fEdad.value = ""; fFoto.value = ""; fotoBlob = null; fotoTx.textContent = "Subir foto";
-        renderPets();
-      } finally { saving = false; btn.classList.remove("disabled"); }
-    }
-    petForm.addEventListener("submit", function (e) { e.preventDefault(); savePet(); });
-    $("#save-pet").addEventListener("click", function (e) { e.preventDefault(); savePet(); });
+    addBtn.addEventListener("click",function(e){e.preventDefault();open(null);});
+    $("#cancel-pet").addEventListener("click",close);
+    $("#btn-delete-pet").addEventListener("click",function(){if(!currentId)return;var p=allPets().find(function(x){return x.id===currentId;});if(!confirm("¿Eliminar a "+(p?p.nombre:"esta mascota")+"?"))return;demo.added=demo.added.filter(function(x){return x.id!==currentId;});if(S.pets.some(function(x){return x.id===currentId;}))demo.deleted.push(currentId);delete demo.edits[currentId];persist();close();render();toast("Mascota eliminada de esta demostración.");});
+    fFoto.addEventListener("change",function(){var f=fFoto.files[0];if(!f)return;if(!f.type.startsWith("image/")){toast("Selecciona una imagen válida.",true);return;}photoLabel.textContent=f.name; var img=new Image(),reader=new FileReader();reader.onload=function(){img.onload=function(){var max=300,k=Math.min(1,max/Math.max(img.width,img.height)),canvas=document.createElement("canvas");canvas.width=Math.round(img.width*k);canvas.height=Math.round(img.height*k);canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);photoData=canvas.toDataURL("image/jpeg",0.68);};img.src=reader.result;};reader.readAsDataURL(f);});
+    form.addEventListener("submit",function(e){e.preventDefault();var name=fNombre.value.trim(),age=fEdad.value.trim();if(!name){toast("Escribe el nombre de la mascota.",true);fNombre.focus();return;}if(age && !/^\d{1,2}(\s*años?)?$/i.test(age)){toast("Indica la edad en años, por ejemplo 3.",true);return;}var pet={nombre:name,especie:fEsp.value,raza:fRaza.value.trim(),edad:age,foto:photoData};if(currentId){var index=demo.added.findIndex(function(x){return x.id===currentId;});if(index>=0)demo.added[index]=Object.assign({},demo.added[index],pet);else demo.edits[currentId]=pet;}else{pet.id="local-"+uuid();demo.added.push(pet);}persist();close();render();toast("Cambios guardados en este navegador.");});
+    render();
   }
 
   /* ================= Dashboard ================= */
@@ -883,6 +869,12 @@
   /* ================= Arranque ================= */
   async function boot() {
     try {
+      if (DEMO && PAGE !== "registro" && PAGE !== "login") {
+        loadDemo();
+        renderResultados();renderDetalle();setupMascotas();setupDashboard();loadPhotos();
+        $$(".nav-actions .profile-pill .js-name").forEach(function(el){el.textContent="Vista previa";});
+        return;
+      }
       var publica = PUBLICAS.indexOf(PAGE) !== -1;
       if (!sb) {
         if (!publica) { toast("No se pudo cargar Supabase. Revisa tu conexión.", true); }
