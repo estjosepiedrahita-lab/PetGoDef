@@ -29,13 +29,19 @@ Salvo los marcados, requieren `Authorization: Bearer <token de Supabase>`.
 | GET | `/api/health` | Estado del servicio (público) |
 | GET / PATCH | `/api/me` | Ver / actualizar perfil (`nombre`, `telefono`, `ciudad`) |
 | GET / POST | `/api/pets` | Listar / crear mascota (`nombre`, `especie`, `raza`, `edad`, `foto_path`) |
-| DELETE | `/api/pets/:id` | Eliminar mascota |
+| PATCH / DELETE | `/api/pets/:id` | Editar / eliminar mascota |
 | GET | `/api/professionals?servicio=paseo\|bano` | Catálogo (público) |
 | GET | `/api/professionals/:id` | Un profesional (público) |
 | GET | `/api/availability?professional=<id>&fecha=AAAA-MM-DD` | Horas ocupadas ese día |
 | GET / POST | `/api/bookings` | Listar / crear reserva (`professional_id`, `pet_id`, `fecha`, `hora`) |
 | PATCH | `/api/bookings/:id` | Reprogramar (`fecha` y/o `hora`) |
 | POST | `/api/bookings/:id/cancel` | Cancelar (idempotente) |
+| GET / POST / PATCH | `/api/business` | Negocio del proveedor (`tipo`, `nombre`, `zona`, `descripcion`, `cantidad`) |
+| GET / POST | `/api/business/workers` | Equipo del negocio |
+| PATCH / DELETE | `/api/business/workers/:id` | Editar / quitar trabajador |
+| GET / POST | `/api/business/offers` | Servicios que ofrece (`servicio`, `precio`, `duracion_min`, `horario`, `descripcion`, `disponible`) |
+| PATCH / DELETE | `/api/business/offers/:id` | Editar / eliminar un servicio (con reservas solo se puede marcar "sin cupos") |
+| GET | `/api/business/bookings` | Citas que han reservado los clientes en sus servicios |
 | GET | `/api/notifications` | Listar notificaciones |
 | PATCH | `/api/notifications/:id` | Marcar una como leída (`{"leida": true}`) |
 | POST | `/api/notifications/read-all` | Marcar todas como leídas |

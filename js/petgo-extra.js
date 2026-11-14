@@ -17,8 +17,8 @@ if($('registration-wizard')){
   $('business-size-row').hidden=providerType()!=='empresa';
   document.querySelectorAll('.owner-only').forEach(el=>el.hidden=pro);
   $('registration-info-subtitle').textContent=pro?'Completa los datos para tu perfil profesional.':'Solo necesitamos tus datos de contacto.';
-  $('registration-final-note').textContent=pro?'Tu perfil se guardará en este navegador como demostración, sin crear una cuenta real.':'Al crear tu cuenta, podrás continuar con PetGo.';
-  $('btn-register').textContent=pro?'Crear perfil de demostración':'Crear cuenta';
+  $('registration-final-note').textContent=pro?'Crearemos tu cuenta y tu perfil profesional para que puedas publicar tus servicios.':'Al crear tu cuenta, podrás continuar con PetGo.';
+  $('btn-register').textContent=pro?'Crear cuenta de proveedor':'Crear cuenta';
   [1,2,3].forEach(n=>{$('registration-step-'+n).hidden=n!==step});
   $('registration-back').hidden=step===1;$('registration-next').hidden=step===3;$('btn-register').hidden=step!==3;
   $('registration-step-label').textContent='PASO '+step+' DE 3';$('registration-progress-fill').style.width=(step/3*100)+'%';
@@ -48,57 +48,163 @@ if($('registration-wizard')){
  render();
 }
 if(!$('provider-panel'))return;
-let business=read('petgo_business',null);
-if(!business){business={tipo:'empresa',nombre:'Mi negocio PetGo',responsable:'',zona:'Bogotá',descripcion:'',cantidad:2,empleados:[]};write('petgo_business',business)}
-let offers=read('petgo_business_offers',[]),appointments=read('petgo_appointments',[]),workers=business.empleados||[];
-let editingOffer=null,editingWorker=null;
+
+/* ================= Panel del proveedor (datos reales vía app.js → API/Supabase) ================= */
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const title=s=>s==='paseo'?'Paseos':'Baño y peluquería';
 const money=n=>'$'+Number(n||0).toLocaleString('es-CO');
-const save=()=>{business.empleados=workers;write('petgo_business',business);write('petgo_business_offers',offers);write('petgo_appointments',appointments);render()};
+const fmtDate=iso=>{const [y,m,d]=String(iso).split('-');return d+'/'+m+'/'+y};
+const fmtTime=t=>{const [h,m]=String(t).split(':').map(Number);return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+(h<12?'AM':'PM')};
+let business=null,offers=[],appointments=[],workers=[];
+let editingOffer=null,editingWorker=null,D=null,toast=()=>{};
+const fail=(msg,e)=>{console.error(msg,e);toast(msg,true)};
+
 function render(){
- $('provider-greeting').textContent=business.nombre;$('provider-sidebar-name').textContent=business.nombre;$('provider-sidebar-type').textContent=business.tipo==='empresa'?'Cuenta empresa':'Cuenta independiente';$('provider-label').textContent=business.tipo==='empresa'?'Empresa':'Independiente';
- $('stat-services').textContent=offers.length;$('stat-available').textContent=offers.filter(x=>x.disponible).length;$('stat-appointments').textContent=appointments.length;$('stat-workers').textContent=business.tipo==='empresa'?Math.max(workers.length,business.cantidad||0):1;
- const company=business.tipo==='empresa';$('equipo').hidden=!company;$('team-nav').hidden=!company;
- $('offers-list').innerHTML=offers.length?offers.map(o=>`<article class="card provider-item"><div><h3>${esc(title(o.servicio))}</h3><p>${esc(o.descripcion)}</p><small>${money(o.precio)} · ${esc(o.duracion_min)} min · ${esc(o.horario)}</small><span class="badge ${o.disponible?'ok':'no'}">${o.disponible?'Disponible':'Sin cupos'}</span></div><div class="provider-item-actions"><button class="btn sec sm" data-edit-offer="${esc(o.id)}">Editar</button><button class="btn danger sm" data-remove-offer="${esc(o.id)}">Eliminar</button></div></article>`).join(''):'<p class="hist-note">Todavía no has publicado servicios. Crea el primero para aparecer en el catálogo.</p>';
- $('appointment-list').innerHTML=appointments.length?appointments.map(a=>`<article class="card provider-item"><div><h3>${esc(a.cliente)} · ${esc(a.mascota)}</h3><p>${esc(title(a.servicio))} · ${esc(a.fecha)} a las ${esc(a.hora)}</p><small>Estado: ${esc(a.estado||'Pendiente')}</small></div><div class="provider-item-actions"><button class="btn sec sm" data-appointment-status="${esc(a.id)}">${a.estado==='Confirmada'?'Marcar completada':'Confirmar'}</button><button class="btn danger sm" data-appointment-delete="${esc(a.id)}">Eliminar</button></div></article>`).join(''):'<p class="hist-note">Aún no hay citas de demostración.</p>';
- $('workers-list').innerHTML=workers.length?workers.map(w=>`<article class="card provider-item"><div><h3>${esc(w.nombre)}</h3><p>${esc(w.funcion)}</p><small>${esc(w.descripcion)}</small></div><div class="provider-item-actions"><button class="btn sec sm" data-worker-edit="${esc(w.id)}">Editar</button><button class="btn danger sm" data-worker-delete="${esc(w.id)}">Eliminar</button></div></article>`).join(''):'<p class="hist-note">Aún no has agregado trabajadores.</p>';
- $('provider-summary-name').textContent=business.nombre;$('provider-summary-type').textContent=business.tipo==='empresa'?'Empresa':'Independiente';$('provider-summary-zone').textContent=business.zona||'Sin definir';$('provider-summary-kind').textContent=business.tipo==='empresa'?'Empresa con varios profesionales':'Profesional independiente';$('provider-summary-workers').textContent=business.tipo==='empresa'?String(workers.length)+' registrados':'1 persona';$('provider-summary-description').textContent=business.descripcion||'Todavía no has añadido una descripción.';
+ const company=business.tipo==='empresa';
+ $('provider-greeting').textContent=business.nombre;$('provider-sidebar-name').textContent=business.nombre;
+ $('provider-sidebar-type').textContent=company?'Cuenta empresa':'Cuenta independiente';$('provider-label').textContent=company?'Empresa':'Independiente';
+ $('stat-services').textContent=offers.length;$('stat-available').textContent=offers.filter(x=>x.disponible).length;
+ $('stat-appointments').textContent=appointments.filter(a=>a.estado==='confirmada').length;
+ $('stat-workers').textContent=company?Math.max(workers.length,business.cantidad||0):1;
+ $('equipo').hidden=!company;$('team-nav').hidden=!company;
+ $('offers-list').innerHTML=offers.length?offers.map(o=>`<article class="card provider-item"><div><h3>${esc(title(o.servicio))}</h3><p>${esc(o.descripcion)}</p><small>${money(o.precio)} · ${esc(o.duracion_min)} min · ${esc(o.horario)}</small><span class="badge ${o.disponible?'ok':'no'}">${o.disponible?'Disponible':'Sin cupos'}</span></div><div class="provider-item-actions"><button class="btn sec sm" data-toggle-offer="${esc(o.id)}">${o.disponible?'Marcar sin cupos':'Marcar disponible'}</button><button class="btn sec sm" data-edit-offer="${esc(o.id)}">Editar</button><button class="btn danger sm" data-remove-offer="${esc(o.id)}">Eliminar</button></div></article>`).join(''):'<p class="hist-note">Todavía no has publicado servicios. Crea el primero para aparecer en el catálogo.</p>';
+ $('appointment-list').innerHTML=appointments.length?appointments.map(a=>`<article class="card provider-item"><div><h3>${esc(a.cliente)} · ${esc(a.pet_nombre)}</h3><p>${esc(a.servicio)} · ${esc(fmtDate(a.fecha))} a las ${esc(fmtTime(a.hora))}</p><small>Estado: ${a.estado==='confirmada'?'Confirmada':'Cancelada'}</small></div></article>`).join(''):'<p class="hist-note">Aún no tienes citas. Aparecerán aquí cuando un cliente reserve uno de tus servicios.</p>';
+ $('workers-list').innerHTML=workers.length?workers.map(w=>`<article class="card provider-item"><div><h3>${esc(w.nombre)}</h3><p>${esc(w.funcion)}</p><small>${esc(w.descripcion)}</small></div><div class="provider-item-actions"><button class="btn sec sm" data-worker-edit="${esc(w.id)}">Editar</button><button class="btn danger sm" data-worker-delete="${esc(w.id)}">Eliminar</button></div></article>`).join(''):'<p class="hist-note">Todavía no has agregado trabajadores.</p>';
+ $('provider-summary-name').textContent=business.nombre;$('provider-summary-type').textContent=company?'Empresa':'Independiente';
+ $('provider-summary-zone').textContent=business.zona||'Sin definir';
+ $('provider-summary-kind').textContent=company?'Empresa con varios profesionales':'Profesional independiente';
+ $('provider-summary-workers').textContent=company?String(workers.length)+' registrados':'1 persona';
+ $('provider-summary-description').textContent=business.descripcion||'Todavía no has añadido una descripción.';
  $('profile-business-name').value=business.nombre;$('profile-business-zone').value=business.zona;$('profile-business-description').value=business.descripcion||'';
 }
-$('new-offer').onclick=()=>openOffer();$('offer-cancel').onclick=()=>{$('offer-form').hidden=true};
-function openOffer(id){const o=offers.find(x=>x.id===id);editingOffer=id||null;$('offer-form').hidden=false;$('offer-form-title').textContent=o?'Editar servicio':'Nuevo servicio';$('offer-service').value=o?.servicio||'paseo';$('offer-price').value=o?.precio||'';$('offer-duration').value=o?.duracion_min||30;$('offer-hours').value=o?.horario||'';$('offer-description').value=o?.descripcion||'';$('offer-available').checked=o?.disponible!==false;$('offer-form').scrollIntoView({behavior:'smooth',block:'center'})}
-$('offer-form').onsubmit=e=>{e.preventDefault();const o={id:editingOffer||'local-'+Date.now(),servicio:$('offer-service').value,precio:Number($('offer-price').value),duracion_min:Number($('offer-duration').value),horario:$('offer-hours').value.trim(),descripcion:$('offer-description').value.trim(),disponible:$('offer-available').checked,activo:true};if(o.precio<1000||o.duracion_min<10)return alert('Revisa el precio y la duración.');if(editingOffer)offers=offers.map(x=>x.id===editingOffer?o:x);else offers.push(o);$('offer-form').hidden=true;save()};
-$('offers-list').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.editOffer)openOffer(b.dataset.editOffer);if(b.dataset.removeOffer&&confirm('¿Eliminar este servicio?')){offers=offers.filter(x=>x.id!==b.dataset.removeOffer);save()}};
-$('new-appointment').onclick=()=>{$('appointment-form').hidden=false;$('appointment-form').scrollIntoView({behavior:'smooth'})};$('appointment-cancel').onclick=()=>{$('appointment-form').hidden=true};
-$('appointment-form').onsubmit=e=>{e.preventDefault();appointments.push({id:'a-'+Date.now(),cliente:$('appointment-client').value.trim(),mascota:$('appointment-pet').value.trim(),fecha:$('appointment-date').value,hora:$('appointment-time').value,servicio:$('appointment-service').value,estado:'Pendiente'});$('appointment-form').reset();$('appointment-form').hidden=true;save()};
-$('appointment-list').onclick=e=>{const b=e.target.closest('button');if(!b)return;const id=b.dataset.appointmentStatus||b.dataset.appointmentDelete;const a=appointments.find(x=>x.id===id);if(!a)return;if(b.dataset.appointmentDelete){if(confirm('¿Eliminar esta cita de ejemplo?'))appointments=appointments.filter(x=>x.id!==id)}else a.estado=a.estado==='Confirmada'?'Completada':'Confirmada';save()};
-$('new-worker').onclick=()=>openWorker();$('worker-cancel').onclick=()=>{$('worker-form').hidden=true};
-function openWorker(id){const w=workers.find(x=>x.id===id);editingWorker=id||null;$('worker-form').hidden=false;$('worker-form-title').textContent=w?'Editar trabajador':'Agregar trabajador';$('worker-name').value=w?.nombre||'';$('worker-role').value=w?.funcion||'Paseador';$('worker-description').value=w?.descripcion||'';$('worker-form').scrollIntoView({behavior:'smooth'})}
-$('worker-form').onsubmit=e=>{e.preventDefault();const w={id:editingWorker||'w-'+Date.now(),nombre:$('worker-name').value.trim(),funcion:$('worker-role').value,descripcion:$('worker-description').value.trim()};if(editingWorker)workers=workers.map(x=>x.id===editingWorker?w:x);else workers.push(w);business.cantidad=workers.length;$('worker-form').hidden=true;save()};
-$('workers-list').onclick=e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.workerEdit)openWorker(b.dataset.workerEdit);if(b.dataset.workerDelete&&confirm('¿Eliminar este trabajador?')){workers=workers.filter(x=>x.id!==b.dataset.workerDelete);business.cantidad=workers.length;save()}};
-$('provider-edit-profile').onclick=()=>{ $('business-profile-form').hidden=false;$('provider-profile-summary').hidden=true;$('provider-edit-profile').hidden=true;};
-$('provider-profile-cancel').onclick=()=>{ $('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false;render();};
-$('business-profile-form').onsubmit=e=>{e.preventDefault();business.nombre=$('profile-business-name').value.trim();business.zona=$('profile-business-zone').value.trim();business.descripcion=$('profile-business-description').value.trim();$('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false;save()};
-const sidebar=$('provider-sidebar'),menuToggle=$('provider-menu-toggle'),backdrop=$('provider-sidebar-backdrop');
-function closeMenu(){sidebar.classList.remove('open');backdrop.hidden=true;menuToggle.setAttribute('aria-expanded','false')}
-function switchView(view){
- if(view==='equipo'&&business.tipo!=='empresa')view='resumen';
- if(!['resumen','ofertas','citas','equipo','perfil'].includes(view))view='resumen';
- document.querySelectorAll('.provider-view').forEach(el=>{el.hidden=el.dataset.view!==view});
- document.querySelectorAll('.provider-side-link[data-provider-view]').forEach(el=>{const active=el.dataset.providerView===view;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
- if(view!=='perfil'){$('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false}
- history.replaceState(null,'','#'+view);closeMenu();window.scrollTo({top:0,behavior:'instant'});
+
+async function loadAll(){
+ const rs=await Promise.all([D.offers.list(),D.workers.list(),D.citas.list()]);
+ const err=rs.find(r=>r.error);if(err)throw err.error;
+ offers=rs[0].data;workers=rs[1].data;appointments=rs[2].data;
 }
-document.querySelectorAll('[data-provider-view]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();switchView(el.dataset.providerView)}));
-menuToggle.onclick=()=>{const open=!sidebar.classList.contains('open');sidebar.classList.toggle('open',open);backdrop.hidden=!open;menuToggle.setAttribute('aria-expanded',String(open))};
-backdrop.onclick=closeMenu;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
-window.addEventListener('hashchange',()=>switchView(location.hash.slice(1)));
-$('provider-logout').onclick=async()=>{
- closeMenu();try{sessionStorage.removeItem('petgo_preview');}catch(e){}
- // No eliminar los servicios ni datos locales del negocio al salir.
- try{if(window.supabase&&window.PETGO_SUPABASE){const auth=window.supabase.createClient(window.PETGO_SUPABASE.url,window.PETGO_SUPABASE.key);await auth.auth.signOut()}}catch(e){console.warn('No fue posible cerrar la sesión remota:',e)}
- location.href='login.html';
-};
-render();switchView(location.hash.slice(1)||'resumen');
+async function refreshCitas(){
+ const r=await D.citas.list();
+ if(!r.error){appointments=r.data;render()}
+}
+async function busy(btn,fn){
+ if(btn)btn.disabled=true;
+ try{return await fn()}finally{if(btn)btn.disabled=false}
+}
+
+function openOffer(id){
+ const o=offers.find(x=>x.id===id);editingOffer=id||null;$('offer-form').hidden=false;
+ $('offer-form-title').textContent=o?'Editar servicio':'Nuevo servicio';
+ $('offer-service').value=o?.servicio||'paseo';$('offer-price').value=o?.precio||'';$('offer-duration').value=o?.duracion_min||30;
+ $('offer-hours').value=o?.horario||'';$('offer-description').value=o?.descripcion||'';$('offer-available').checked=o?.disponible!==false;
+ $('offer-form').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function openWorker(id){
+ const w=workers.find(x=>x.id===id);editingWorker=id||null;$('worker-form').hidden=false;
+ $('worker-form-title').textContent=w?'Editar trabajador':'Agregar trabajador';
+ $('worker-name').value=w?.nombre||'';$('worker-role').value=w?.funcion||'Paseador';$('worker-description').value=w?.descripcion||'';
+ $('worker-form').scrollIntoView({behavior:'smooth'});
+}
+
+function bindEvents(){
+ $('new-offer').onclick=()=>openOffer();$('offer-cancel').onclick=()=>{$('offer-form').hidden=true};
+ $('offer-form').onsubmit=async e=>{e.preventDefault();
+  const o={servicio:$('offer-service').value,precio:Number($('offer-price').value),duracion_min:Number($('offer-duration').value),horario:$('offer-hours').value.trim(),descripcion:$('offer-description').value.trim(),disponible:$('offer-available').checked};
+  if(!Number.isInteger(o.precio)||o.precio<1000||o.duracion_min<10)return toast('Revisa el precio (mínimo $1.000) y la duración (mínimo 10 min).',true);
+  await busy(e.submitter,async()=>{
+   const r=editingOffer?await D.offers.update(editingOffer,o):await D.offers.create(o,business.id);
+   if(r.error)return fail('No se pudo guardar el servicio.',r.error);
+   offers=editingOffer?offers.map(x=>x.id===editingOffer?r.data:x):offers.concat(r.data);
+   $('offer-form').hidden=true;render();toast('Servicio guardado.');
+  });
+ };
+ $('offers-list').onclick=async e=>{
+  const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.editOffer)return openOffer(b.dataset.editOffer);
+  if(b.dataset.toggleOffer){
+   const o=offers.find(x=>x.id===b.dataset.toggleOffer);
+   return busy(b,async()=>{const r=await D.offers.update(o.id,{disponible:!o.disponible});if(r.error)return fail('No se pudo cambiar la disponibilidad.',r.error);offers=offers.map(x=>x.id===o.id?r.data:x);render()});
+  }
+  if(b.dataset.removeOffer&&confirm('¿Eliminar este servicio?'))busy(b,async()=>{
+   const r=await D.offers.remove(b.dataset.removeOffer);
+   if(r.error)return fail(r.error.code==='oferta_con_reservas'?'Este servicio ya tiene reservas. Márcalo como "sin cupos" en lugar de eliminarlo.':'No se pudo eliminar el servicio.',r.error);
+   offers=offers.filter(x=>x.id!==b.dataset.removeOffer);render();
+  });
+ };
+ // Las citas son de solo lectura: las crean los clientes al reservar.
+ $('new-appointment').hidden=true;$('appointment-form').remove();
+
+ $('new-worker').onclick=()=>openWorker();$('worker-cancel').onclick=()=>{$('worker-form').hidden=true};
+ $('worker-form').onsubmit=async e=>{e.preventDefault();
+  const w={nombre:$('worker-name').value.trim(),funcion:$('worker-role').value,descripcion:$('worker-description').value.trim()};
+  await busy(e.submitter,async()=>{
+   const r=editingWorker?await D.workers.update(editingWorker,w):await D.workers.create(w,business.id);
+   if(r.error)return fail('No se pudo guardar al trabajador.',r.error);
+   workers=editingWorker?workers.map(x=>x.id===editingWorker?r.data:x):workers.concat(r.data);
+   if(business.tipo==='empresa'&&workers.length>business.cantidad){const u=await D.biz.update(business.id,{cantidad:workers.length});if(!u.error)business=u.data}
+   $('worker-form').hidden=true;render();toast('Trabajador guardado.');
+  });
+ };
+ $('workers-list').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.workerEdit)return openWorker(b.dataset.workerEdit);
+  if(b.dataset.workerDelete&&confirm('¿Eliminar este trabajador?'))busy(b,async()=>{
+   const r=await D.workers.remove(b.dataset.workerDelete);if(r.error)return fail('No se pudo eliminar al trabajador.',r.error);
+   workers=workers.filter(x=>x.id!==b.dataset.workerDelete);render();
+  });
+ };
+ $('provider-edit-profile').onclick=()=>{$('business-profile-form').hidden=false;$('provider-profile-summary').hidden=true;$('provider-edit-profile').hidden=true};
+ $('provider-profile-cancel').onclick=()=>{$('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false;render()};
+ $('business-profile-form').onsubmit=async e=>{e.preventDefault();
+  const p={nombre:$('profile-business-name').value.trim(),zona:$('profile-business-zone').value.trim(),descripcion:$('profile-business-description').value.trim()};
+  if(!p.nombre||!p.zona)return toast('El nombre y la zona son obligatorios.',true);
+  await busy(e.submitter,async()=>{
+   const r=await D.biz.update(business.id,p);if(r.error)return fail('No se pudo guardar el perfil.',r.error);
+   business=r.data;
+   const o=await D.offers.list();if(!o.error)offers=o.data;
+   $('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false;render();toast('Perfil actualizado.');
+  });
+ };
+
+ const sidebar=$('provider-sidebar'),menuToggle=$('provider-menu-toggle'),backdrop=$('provider-sidebar-backdrop');
+ function closeMenu(){sidebar.classList.remove('open');backdrop.hidden=true;menuToggle.setAttribute('aria-expanded','false')}
+ function switchView(view){
+  if(view==='equipo'&&business.tipo!=='empresa')view='resumen';
+  if(!['resumen','ofertas','citas','equipo','perfil'].includes(view))view='resumen';
+  document.querySelectorAll('.provider-view').forEach(el=>{el.hidden=el.dataset.view!==view});
+  document.querySelectorAll('.provider-side-link[data-provider-view]').forEach(el=>{const active=el.dataset.providerView===view;el.classList.toggle('active',active);if(active)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current')});
+  if(view!=='perfil'){$('business-profile-form').hidden=true;$('provider-profile-summary').hidden=false;$('provider-edit-profile').hidden=false}
+  history.replaceState(null,'','#'+view);closeMenu();window.scrollTo({top:0,behavior:'instant'});
+  if(view==='citas'||view==='resumen')refreshCitas();
+ }
+ document.querySelectorAll('[data-provider-view]').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();switchView(el.dataset.providerView)}));
+ menuToggle.onclick=()=>{const open=!sidebar.classList.contains('open');sidebar.classList.toggle('open',open);backdrop.hidden=!open;menuToggle.setAttribute('aria-expanded',String(open))};
+ backdrop.onclick=closeMenu;document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
+ window.addEventListener('hashchange',()=>switchView(location.hash.slice(1)));
+ $('provider-logout').onclick=async()=>{closeMenu();await window.PetGo.logout()};
+ switchView(location.hash.slice(1)||'resumen');
+}
+
+(async function start(){
+ if(!window.PetGo){document.body.insertAdjacentHTML('afterbegin','<p class="hist-note" style="padding:24px">No se pudo cargar PetGo. Recarga la página.</p>');return}
+ const ctx=await window.PetGo.ready;
+ if(!ctx)return; // sin sesión: app.js ya redirigió al login
+ D=ctx.D;toast=ctx.toast;
+ try{
+  let r=await D.biz.get();if(r.error)throw r.error;
+  business=r.data;
+  if(!business){
+   // Primer ingreso tras registrarse: se crea el negocio con los datos guardados en el registro
+   let pending=null;try{pending=JSON.parse(localStorage.getItem('petgo_business_pending')||'null')}catch(e){}
+   if(!pending){
+    const me=await D.me.get();
+    if(me.data&&me.data.rol==='proveedor')pending={tipo:'individual',nombre:me.data.nombre||'Mi negocio',zona:'Bogotá'};
+    else{location.replace('dashboard.html');return}
+   }
+   r=await D.biz.create(pending);if(r.error)throw r.error;
+   business=r.data;try{localStorage.removeItem('petgo_business_pending')}catch(e){}
+  }
+  await loadAll();
+ }catch(e){fail('No se pudo cargar tu panel. Recarga la página.',e);return}
+ bindEvents();render();
+})();
 })();

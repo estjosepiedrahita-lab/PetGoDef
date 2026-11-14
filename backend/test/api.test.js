@@ -219,3 +219,72 @@ test('base de datos caída: la API responde 502 sin filtrar detalles', async () 
   s.close();
   assert.equal(r.status, 502);
 });
+
+// ---------------- Proveedores ----------------
+test('proveedores: crear negocio, equipo y ofertas; aparecen en el catálogo y se pueden reservar', async () => {
+  const pro = sup.addUser('paseos@x.co');
+  const P = api(pro), A = api(ana);
+  assert.equal((await P('GET', '/api/business')).body, null);
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, horario: 'L-V', descripcion: 'x' })).body.error.code, 'sin_negocio');
+  assert.equal((await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Solo uno', cantidad: 1 })).status, 400);
+  const b = await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Paseos Luna', zona: 'Chapinero', cantidad: 3 });
+  assert.equal(b.status, 201);
+  assert.equal((await P('POST', '/api/business', { tipo: 'individual', nombre: 'Otro' })).status, 409);
+
+  const w = await P('POST', '/api/business/workers', { nombre: 'Carlos', funcion: 'Paseador' });
+  assert.equal(w.status, 201);
+  assert.equal((await P('PATCH', '/api/business/workers/' + w.body.id, { descripcion: 'Turno mañana' })).body.descripcion, 'Turno mañana');
+  assert.equal((await P('GET', '/api/business/workers')).body.length, 1);
+  assert.equal((await api(luis)('GET', '/api/business/workers')).body.length, 0);
+
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 5, duracion_min: 30, horario: 'x', descripcion: 'x' })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, horario: 'x', descripcion: 'x', rating: 5 })).status, 400);
+  const o = await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 21000, duracion_min: 40, horario: 'Lun–Sáb', descripcion: 'Paseos con cariño' });
+  assert.equal(o.status, 201);
+  assert.equal(o.body.nombre, 'Paseos Luna');
+  assert.equal(o.body.rating, 0);
+
+  const cat = await api()('GET', '/api/professionals?servicio=paseo');
+  assert.ok(cat.body.some((x) => x.id === o.body.id));
+
+  // un dueño reserva la oferta y el proveedor ve la cita con el nombre del cliente
+  const mascota = (await A('POST', '/api/pets', { nombre: 'Rocky' })).body;
+  const fecha = plusDays(3);
+  const bk = await A('POST', '/api/bookings', { professional_id: o.body.id, pet_id: mascota.id, fecha, hora: '10:00' });
+  assert.equal(bk.status, 201);
+  const citas = await P('GET', '/api/business/bookings');
+  assert.equal(citas.body.length, 1);
+  assert.equal(citas.body[0].pet_nombre, 'Rocky');
+  assert.ok(citas.body[0].cliente && citas.body[0].cliente !== 'Cliente');
+  assert.equal((await api(luis)('GET', '/api/business/bookings')).body.length, 0);
+
+  // sin cupos: no se puede reservar
+  assert.equal((await P('PATCH', '/api/business/offers/' + o.body.id, { disponible: false })).body.disponible, false);
+  const bk2 = await A('POST', '/api/bookings', { professional_id: o.body.id, pet_id: mascota.id, fecha, hora: '11:00' });
+  assert.equal(bk2.status, 404);
+  // con reservas no se elimina
+  assert.equal((await P('DELETE', '/api/business/offers/' + o.body.id)).body.error.code, 'oferta_con_reservas');
+
+  // otro usuario no puede tocar ofertas ajenas ni las del catálogo base
+  assert.equal((await api(luis)('PATCH', '/api/business/offers/' + o.body.id, { precio: 1000 })).status, 404);
+  assert.equal((await P('PATCH', '/api/business/offers/happy-walk', { precio: 1000 })).status, 404);
+  assert.equal((await P('DELETE', '/api/business/offers/happy-walk')).status, 404);
+
+  // al renombrar el negocio, cambia en sus ofertas
+  await P('PATCH', '/api/business', { nombre: 'Luna Pet' });
+  assert.equal((await api()('GET', '/api/professionals/' + o.body.id)).body.nombre, 'Luna Pet');
+  assert.equal((await P('DELETE', '/api/business/workers/' + w.body.id)).status, 200);
+});
+
+test('mascotas: editar nombre, raza y foto', async () => {
+  const A = api(ana);
+  const m = (await A('POST', '/api/pets', { nombre: 'Toby', raza: 'Criollo' })).body;
+  const e = await A('PATCH', '/api/pets/' + m.id, { nombre: 'Toby II', edad: '4' });
+  assert.equal(e.status, 200);
+  assert.equal(e.body.nombre, 'Toby II');
+  assert.equal(e.body.raza, 'Criollo');
+  assert.equal((await A('PATCH', '/api/pets/' + m.id, { foto_path: luis.id + '/abcdefgh12.jpg' })).status, 400);
+  assert.equal((await A('PATCH', '/api/pets/' + m.id, { foto_path: ana.id + '/abcdefgh12.jpg' })).status, 200);
+  assert.equal((await A('PATCH', '/api/pets/' + m.id, {})).status, 400);
+  assert.equal((await api(luis)('PATCH', '/api/pets/' + m.id, { nombre: 'Robado' })).status, 404);
+});
