@@ -37,6 +37,8 @@ function mapDbError(status, err) {
   if (code === '23505' || /duplicate key|bookings_slot_unico/i.test(msg)) return new ApiError(409, 'horario_ocupado', 'Ese horario ya no está disponible.');
   if (/LIMITE_RESERVAS/.test(msg)) return new ApiError(409, 'limite_reservas', 'Alcanzaste el límite de 5 reservas pendientes.');
   if (/FECHA_PASADA/.test(msg)) return new ApiError(422, 'fecha_pasada', 'Esa fecha ya pasó. Elige otra.');
+  if (/FUERA_DE_HORARIO/.test(msg)) return new ApiError(422, 'fuera_de_horario', 'Ese día u hora está fuera del horario de atención del proveedor.');
+  if (/DIRECCION_REQUERIDA/.test(msg)) return new ApiError(422, 'direccion_requerida', 'Agrega la dirección de tu local en el perfil antes de publicar este servicio.');
   if (/PROFESIONAL_NO_DISPONIBLE/.test(msg)) return new ApiError(404, 'profesional_no_disponible', 'Ese profesional no está disponible.');
   if (/RESERVA_CANCELADA/.test(msg)) return new ApiError(409, 'reserva_cancelada', 'Esa reserva ya está cancelada.');
   if (code === 'PGRST116') return new ApiError(404, 'no_encontrado', 'No se encontró el recurso.');

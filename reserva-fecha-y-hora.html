@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><meta name="theme-color" content="#ea580c">
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -36,13 +37,8 @@
   </div>
   <div class="slots">
     <div class="tt">Horarios disponibles</div>
-    <div class="grid">
-      <button type="button" class="slot" data-hora="10:00 AM">10:00 AM</button>
-      <button type="button" class="slot" data-hora="12:00 PM">12:00 PM</button>
-      <button type="button" class="slot sel" data-hora="3:00 PM">3:00 PM</button>
-      <button type="button" class="slot" data-hora="5:00 PM">5:00 PM</button>
-    </div>
-    <p class="nt">Los horarios tachados ya no están disponibles.</p>
+    <div class="grid" id="slot-grid"></div>
+    <p class="nt" id="slot-note">Elige una fecha para ver los horarios de atención. Los tachados ya no están disponibles.</p>
   </div>
 </div>
 </div>

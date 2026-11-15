@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><meta name="theme-color" content="#ea580c">
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -24,7 +25,7 @@
 <div class="col w560 gap20">
   <a class="back" href="mis-reservas.html">← Volver a mis reservas</a>
   <div class="head-row"><h1 class="h1">Detalle de reserva</h1><span class="badge next" id="res-badge">Próxima</span></div>
-  <div class="summary"><div class="tt">Resumen de tu reserva</div><div class="row"><span>Servicio</span><span data-res="servicio">Baño y peluquería</span></div><div class="row"><span>Profesional</span><span data-res="profesional">PetGo Grooming</span></div><div class="row"><span>Mascota</span><span data-res="mascota">Max</span></div><div class="row"><span>Fecha</span><span data-res="fecha">28 de octubre de 2026</span></div><div class="row"><span>Hora</span><span data-res="hora">3:00 PM</span></div><div class="row"><span>Duración</span><span data-res="duracion">90 min</span></div><div class="row"><span>Precio</span><span data-res="precio">$35.000</span></div></div>
+  <div class="summary"><div class="tt">Resumen de tu reserva</div><div class="row"><span>Servicio</span><span data-res="servicio">Baño y peluquería</span></div><div class="row"><span>Profesional</span><span data-res="profesional">PetGo Grooming</span></div><div class="row" data-row="direccion" hidden><span>Dirección</span><span data-res="direccion"></span></div><div class="row" data-row="telefono" hidden><span>Contacto</span><span data-res="telefono"></span></div><div class="row"><span>Mascota</span><span data-res="mascota">Max</span></div><div class="row"><span>Fecha</span><span data-res="fecha">28 de octubre de 2026</span></div><div class="row"><span>Hora</span><span data-res="hora">3:00 PM</span></div><div class="row"><span>Duración</span><span data-res="duracion">90 min</span></div><div class="row"><span>Precio</span><span data-res="precio">$35.000</span></div></div>
   <div class="btn-row" id="res-actions"><a class="btn sec grow" id="btn-reprog" href="reserva-fecha-y-hora.html">Reprogramar</a><a class="btn danger grow" id="btn-cancel" href="modal-cancelar-reserva.html">Cancelar reserva</a></div>
 </div>
 </main>

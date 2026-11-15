@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><meta name="theme-color" content="#ea580c">
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -29,6 +30,7 @@
   </div>
   <div class="card edit-card" id="edit-card">
     <div class="tt">Editar información personal</div>
+    <div class="field alt"><label>Foto de perfil</label><div class="photo-edit"><span class="avatar l" id="p-foto-prev"></span><label class="btn sec sm photo-btn">Cambiar foto<input type="file" id="p-foto" accept="image/*" hidden></label><button type="button" class="btn sec sm" id="p-foto-quitar" hidden>Quitar</button></div></div>
     <div class="field alt"><label for="p-nombre">Nombre</label><input id="p-nombre" type="text" placeholder="Tu nombre" value="" style="max-width:320px"></div>
     <div class="field alt"><label for="p-correo">Correo</label><input id="p-correo" type="text" placeholder="tu@correo.com" value="" style="max-width:320px"></div>
     <div class="field alt"><label for="p-tel">Teléfono</label><input id="p-tel" type="text" placeholder="+57 300 123 4567" value="" style="max-width:320px"></div>

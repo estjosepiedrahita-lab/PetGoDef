@@ -36,10 +36,14 @@ function create() {
   const err = (res, status, code, message) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ code, message })); };
   const json = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(body === undefined ? '' : JSON.stringify(body)); };
 
-  function scoped(table, w) {
+  function scoped(table, w, write) {
     const rows = state[table];
     const myBiz = () => state.businesses.filter((b) => b.owner_id === w.id).map((b) => b.id);
     if (table === 'professionals') return rows.filter((r) => r.activo || (!w.anon && myBiz().includes(r.business_id)));
+    if (table === 'workers' && !write) {
+      const pub = state.professionals.filter((o) => o.activo && o.business_id).map((o) => o.business_id);
+      return rows.filter((r) => pub.includes(r.business_id) || myBiz().includes(r.business_id));
+    }
     if (w.anon) return [];
     if (table === 'businesses') return rows.filter((r) => r.owner_id === w.id);
     if (table === 'workers') return rows.filter((r) => myBiz().includes(r.business_id));
@@ -61,11 +65,17 @@ function create() {
     if (q.get('limit')) out = out.slice(0, Number(q.get('limit')));
     return out;
   }
-  const embed = (table, rows, q) => !(table === 'bookings' && /professionals\(nombre\)/.test(q.get('select') || ''))
+  const embed = (table, rows, q) => !(table === 'bookings' && /professionals\(nombre/.test(q.get('select') || ''))
     ? rows.map((r) => ({ ...r }))
-    : rows.map((r) => ({ ...r, professionals: { nombre: (state.professionals.find((p) => p.id === r.professional_id) || {}).nombre } }));
+    : rows.map((r) => ({ ...r, professionals: (({ nombre, direccion, telefono }) => ({ nombre, direccion, telefono }))(state.professionals.find((p) => p.id === r.professional_id) || {}) }));
   const slotTaken = (b, exclude) => state.bookings.some((x) => x.id !== exclude && x.estado === 'confirmada' && x.professional_id === b.professional_id && x.fecha === b.fecha && x.hora.slice(0, 5) === b.hora.slice(0, 5));
 
+  function fueraHorario(p, fecha, hora) {
+    if (!p.dias || !p.hora_inicio) return false;
+    const dow = new Date(fecha + 'T00:00:00Z').getUTCDay();
+    const min = (t) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));
+    return !p.dias.includes(dow) || min(hora) < min(p.hora_inicio) || min(hora) + p.duracion_min > min(p.hora_fin);
+  }
   function readBody(req) {
     return new Promise((r) => { let t = ''; req.on('data', (c) => (t += c)); req.on('end', () => r(t ? JSON.parse(t) : undefined)); });
   }
@@ -112,18 +122,19 @@ function create() {
       const r = { id: uid(), user_id: w.id, created_at: iso(), ...body };
       if (table === 'pets') {
         if (!r.nombre || !String(r.nombre).trim()) return err(res, 400, '23514', 'check violation');
-        r.especie = r.especie || 'Perro';
+        r.especie = r.especie || 'Perro'; r.descripcion = r.descripcion || '';
       } else if (table === 'bookings') {
         const p = state.professionals.find((x) => x.id === r.professional_id && x.activo && x.disponible !== false);
         if (!p) return err(res, 400, 'P0001', 'PROFESIONAL_NO_DISPONIBLE');
         r.servicio = p.servicio === 'paseo' ? 'Paseo' : 'Baño y peluquería'; r.precio = p.precio; r.duracion_min = p.duracion_min; r.estado = 'confirmada';
         if (r.fecha < today()) return err(res, 400, 'P0001', 'FECHA_PASADA');
+        if (fueraHorario(p, r.fecha, r.hora)) return err(res, 400, 'P0001', 'FUERA_DE_HORARIO');
         if (state.bookings.filter((b) => b.user_id === w.id && b.estado === 'confirmada').length >= 5) return err(res, 400, 'P0001', 'LIMITE_RESERVAS');
         if (slotTaken(r)) return err(res, 409, '23505', 'duplicate key value violates unique constraint "bookings_slot_unico"');
         notify(w.id, 'Tu reserva ha sido confirmada.');
       } else if (table === 'businesses') {
         if (state.businesses.some((b) => b.owner_id === w.id)) return err(res, 409, '23505', 'duplicate key value violates unique constraint');
-        delete r.user_id; r.owner_id = w.id; r.zona = r.zona || 'Bogotá'; r.descripcion = r.descripcion || '';
+        delete r.user_id; r.owner_id = w.id; r.zona = r.zona || 'Bogotá'; r.descripcion = r.descripcion || ''; r.direccion = r.direccion || ''; r.telefono = r.telefono || ''; r.foto_path = r.foto_path || null;
       } else if (table === 'workers') {
         delete r.user_id;
         if (!scoped('businesses', w).some((b) => b.id === r.business_id)) return err(res, 403, '42501', 'new row violates row-level security policy');
@@ -131,13 +142,16 @@ function create() {
         delete r.user_id;
         const biz = scoped('businesses', w).find((b) => b.id === r.business_id);
         if (!biz) return err(res, 403, '42501', 'new row violates row-level security policy');
-        Object.assign(r, { id: 'o-' + uid().slice(-12), nombre: biz.nombre, zona: biz.zona, tipo: biz.tipo, rating: 0, resenas: 0, activo: true, detalle: r.descripcion, disponible: r.disponible !== false });
+        if ((biz.tipo === 'empresa' || r.servicio === 'bano') && !String(biz.direccion || '').trim()) return err(res, 400, 'P0001', 'DIRECCION_REQUERIDA');
+        if (!r.dias || !r.hora_inicio || !r.hora_fin) return err(res, 400, '23514', 'check violation horario');
+        Object.assign(r, { direccion: biz.direccion, telefono: biz.telefono, foto_path: biz.foto_path, id: 'o-' + uid().slice(-12), nombre: biz.nombre, zona: biz.zona, tipo: biz.tipo, rating: 0, resenas: 0, activo: true, detalle: r.descripcion, disponible: r.disponible !== false });
       } else return err(res, 403, '42501', 'permission denied');
       state[table].push(r);
       return finish(201, [r]);
     }
     if (req.method === 'PATCH' || req.method === 'DELETE') {
-      const rows = applyQuery(scoped(table, w), q);
+      if (![...q.keys()].some((k) => !['select', 'order', 'limit'].includes(k))) return err(res, 400, '21000', req.method === 'PATCH' ? 'UPDATE requires a WHERE clause' : 'DELETE requires a WHERE clause');
+      const rows = applyQuery(scoped(table, w, true), q);
       if (req.method === 'DELETE') {
         if (!['pets', 'workers', 'professionals'].includes(table)) return err(res, 403, '42501', 'permission denied');
         if (table === 'professionals' && rows.some((o) => !o.business_id || !scoped('businesses', w).some((b) => b.id === o.business_id))) return finish(200, []);
@@ -150,24 +164,25 @@ function create() {
         if (table === 'bookings') {
           const nb = { ...r, ...body };
           if (old.estado === 'cancelada' && nb.estado !== 'cancelada') return err(res, 400, 'P0001', 'RESERVA_CANCELADA');
+          if ((body.fecha || body.hora) && fueraHorario(state.professionals.find((x) => x.id === r.professional_id) || {}, nb.fecha, nb.hora)) return err(res, 400, 'P0001', 'FUERA_DE_HORARIO');
           if ((body.fecha || body.hora) && slotTaken(nb, r.id)) return err(res, 409, '23505', 'duplicate key value violates unique constraint "bookings_slot_unico"');
           for (const k of Object.keys(body)) if (['estado', 'fecha', 'hora'].includes(k)) r[k] = body[k];
           if (r.estado === 'cancelada' && old.estado === 'confirmada') notify(r.user_id, 'Tu reserva fue cancelada.');
           else if (r.fecha !== old.fecha || r.hora !== old.hora) notify(r.user_id, 'Tu reserva fue reprogramada.');
         } else if (table === 'profiles') {
-          for (const k of ['nombre', 'telefono', 'ciudad']) if (k in body) r[k] = body[k];
+          for (const k of ['nombre', 'telefono', 'ciudad', 'foto_path']) if (k in body) r[k] = body[k];
         } else if (table === 'notifications') {
           if ('leida' in body) r.leida = body.leida;
         } else if (table === 'pets') {
-          for (const k of ['nombre', 'especie', 'raza', 'edad', 'foto_path']) if (k in body) r[k] = body[k];
+          for (const k of ['nombre', 'especie', 'raza', 'edad', 'foto_path', 'descripcion']) if (k in body) r[k] = body[k];
         } else if (table === 'businesses') {
-          for (const k of ['nombre', 'zona', 'descripcion', 'cantidad']) if (k in body) r[k] = body[k];
-          state.professionals.filter((o) => o.business_id === r.id).forEach((o) => { o.nombre = r.nombre; o.zona = r.zona; });
+          for (const k of ['nombre', 'zona', 'descripcion', 'cantidad', 'direccion', 'telefono', 'foto_path']) if (k in body) r[k] = body[k];
+          state.professionals.filter((o) => o.business_id === r.id).forEach((o) => { o.nombre = r.nombre; o.zona = r.zona; o.direccion = r.direccion; o.telefono = r.telefono; o.foto_path = r.foto_path; });
         } else if (table === 'workers') {
-          for (const k of ['nombre', 'funcion', 'descripcion']) if (k in body) r[k] = body[k];
+          for (const k of ['nombre', 'funcion', 'descripcion', 'foto_path']) if (k in body) r[k] = body[k];
         } else if (table === 'professionals') {
           if (!r.business_id || !scoped('businesses', w).some((b) => b.id === r.business_id)) return finish(200, []);
-          for (const k of ['servicio', 'precio', 'duracion_min', 'horario', 'descripcion', 'disponible']) if (k in body) r[k] = body[k];
+          for (const k of ['servicio', 'precio', 'duracion_min', 'horario', 'descripcion', 'disponible', 'dias', 'hora_inicio', 'hora_fin']) if (k in body) r[k] = body[k];
         } else return err(res, 403, '42501', 'permission denied');
       }
       return finish(200, rows);

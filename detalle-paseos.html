@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Happy Walk · PetGo</title>
+<title>Profesional · PetGo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><meta name="theme-color" content="#ea580c">
 </head>
 <body>
 <header class="navbar"><div class="navbar-in">
@@ -23,24 +24,27 @@
 
 <div class="page">
   <a class="back" href="resultados-paseos.html">← Volver a resultados</a>
-  <div class="detail" data-default="happy-walk">
+  <div class="detail" data-default="">
     <div class="info">
-      <div class="photo" id="d-photo" data-img="assets/img/pro-happy-walk.jpg"><span class="e">🐕</span><span class="c">Foto del profesional</span></div>
+      <div class="photo" id="d-photo"><span class="e">🐾</span><span class="c">Este profesional aún no ha subido una foto</span></div>
       <div class="head">
-        <div class="nm"><span class="provider-kicker">Proveedor de servicios · <b id="provider-type">Empresa</b></span><h1 class="h1" data-d="nombre">Happy Walk</h1><div class="rt"><span class="stars"><span class="s">★</span><span class="v" data-d="rating" style="color:var(--texto)">4.8</span></span><span data-d="meta">(reseñas verificadas) · Bogotá</span></div></div>
+        <div class="nm"><span class="provider-kicker">Proveedor de servicios · <b id="provider-type">Empresa</b></span><h1 class="h1" data-d="nombre">Profesional</h1><div class="rt"><span class="stars"><span class="s">★</span><span class="v" data-d="rating" style="color:var(--texto)">4.8</span></span><span data-d="meta">(reseñas verificadas) · Bogotá</span></div></div>
         <span class="badge ok">Disponible</span>
       </div>
-      <div class="stats"><div><b data-d="precio">$18.000</b><span>por sesión</span></div><div><b data-d="duracion">30 min</b><span>duración</span></div><div><b data-d="zona">Usaquén</b><span>ubicación</span></div></div>
+      <div class="stats"><div><b data-d="precio">—</b><span>por sesión</span></div><div><b data-d="duracion">—</b><span>duración</span></div><div><b data-d="zona">—</b><span>zona</span></div></div>
       <div class="h3">Acerca de este servicio</div>
-      <p class="body-t" data-d="detalle">Paseos personalizados para perros, con seguimiento durante el servicio. Rutas seguras y diversión garantizada.</p>
-      <div class="h3">Disponibilidad</div>
-      <p class="body-t">🕒 <span data-d="horario">Lun–Sáb, 7:00 AM – 7:00 PM</span></p>
-      <div class="h3">Reseñas recientes</div>
-      <div class="reviews"><div class="review"><div class="who"><span class="avatar m">A</span><b>Ana L.</b><span class="stars"><span class="s">★</span><span class="v">4.9</span></span></div><p>Luna adora sus paseos con Happy Walk.</p></div><div class="review"><div class="who"><span class="avatar m">J</span><b>Jorge M.</b><span class="stars"><span class="s">★</span><span class="v">4.9</span></span></div><p>Muy buena atención y comunicación constante.</p></div></div>
+      <p class="body-t" data-d="detalle"></p>
+      <div class="h3">Horario de atención</div>
+      <p class="body-t">🕒 <span data-d="horario">—</span></p>
+      <div id="d-lugar" hidden><div class="h3">Dónde llevar a tu mascota</div>
+      <p class="body-t">📍 <span id="d-direccion"></span> <a class="map-link" id="d-mapa" target="_blank" rel="noopener">Ver en el mapa</a></p></div>
+      <div id="d-contacto" hidden><div class="h3">Contacto</div>
+      <p class="body-t">📞 <a id="d-tel"></a> · <a id="d-wa" class="map-link" target="_blank" rel="noopener">Escribir por WhatsApp</a></p></div>
+      <div id="d-equipo" hidden><div class="h3">Equipo</div><div class="team-grid" id="d-equipo-lista"></div></div>
     </div>
     <aside class="book">
-      <div class="pr" data-d="precio">$18.000</div><div class="un">por sesión</div>
-      <a class="btn block" href="reserva-mascota.html" data-reservar data-pro="happy-walk" data-servicio="Paseo" data-profesional="Happy Walk" data-duracion="30 min" data-precio="$18.000" data-volver="detalle-paseos.html">Reservar servicio</a>
+      <div class="pr" data-d="precio">—</div><div class="un">por sesión</div>
+      <a class="btn block" href="reserva-mascota.html" data-reservar data-pro="" data-servicio="Paseo" data-profesional="" data-duracion="" data-precio="" data-volver="detalle-paseos.html">Reservar servicio</a>
       <div class="fn">Cancelación gratuita hasta 2 horas antes.</div>
     </aside>
   </div>

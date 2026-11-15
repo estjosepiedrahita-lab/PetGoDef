@@ -238,18 +238,5 @@ create policy pet_photos_update on storage.objects for update to authenticated
 create policy pet_photos_delete on storage.objects for delete to authenticated
   using (bucket_id = 'pet-photos' and (storage.foldername(name))[1] = auth.uid()::text);
 
--- ---------- 5. CATÁLOGO INICIAL -------------------------------------
-insert into public.professionals (id, servicio, nombre, zona, descripcion, detalle, precio, duracion_min, rating, resenas, horario) values
- ('paseos-petgo',  'paseo', 'Paseos PetGo',     'Chapinero', 'Paseos profesionales con seguimiento GPS en tiempo real.',
-  'Paseos profesionales con seguimiento GPS en tiempo real. Rutas seguras y diversión garantizada.', 20000, 30, 4.9, 128, 'Lun–Sáb, 7:00 AM – 7:00 PM'),
- ('happy-walk',    'paseo', 'Happy Walk',       'Usaquén',   'Paseos personalizados con seguimiento durante el servicio.',
-  'Paseos personalizados para perros, con seguimiento durante el servicio. Rutas seguras y diversión garantizada.', 18000, 30, 4.8, 96, 'Lun–Sáb, 7:00 AM – 7:00 PM'),
- ('patitas-felices','paseo','Patitas Felices',  'Suba',      'Paseos grupales e individuales con cuidadores certificados.',
-  'Paseos grupales e individuales con cuidadores certificados.', 22000, 45, 4.7, 74, 'Lun–Sáb, 7:00 AM – 7:00 PM'),
- ('petgo-grooming','bano',  'PetGo Grooming',   'Chapinero', 'Baño, secado y corte con productos hipoalergénicos.',
-  'Baño, secado y corte con productos hipoalergénicos. Tu mascota queda limpia, cómoda y feliz.', 35000, 90, 4.9, 142, 'Lun–Sáb, 8:00 AM – 6:00 PM'),
- ('spa-canino-bogota','bano','Spa Canino Bogotá','Usaquén',  'Spa completo: baño, corte, limpieza de oídos y uñas.',
-  'Spa completo: baño, corte, limpieza de oídos y uñas.', 48000, 120, 4.8, 88, 'Lun–Sáb, 8:00 AM – 6:00 PM'),
- ('patas-limpias', 'bano',  'Patas Limpias',    'Suba',      'Baño y peluquería a domicilio para perros pequeños.',
-  'Baño y peluquería a domicilio para perros pequeños.', 30000, 60, 4.6, 51, 'Lun–Sáb, 8:00 AM – 6:00 PM')
-on conflict (id) do nothing;
+-- ---------- 5. CATÁLOGO ---------------------------------------------
+-- El catálogo se llena solo con proveedores registrados (ver 03_proveedores.sql y 04_perfiles_horarios.sql).

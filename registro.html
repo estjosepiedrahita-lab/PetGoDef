@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@400;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/styles.css">
 <script>document.documentElement.classList.add("booting");setTimeout(function(){document.documentElement.classList.remove("booting")},5000)</script>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png"><link rel="apple-touch-icon" href="assets/apple-touch-icon.png"><meta name="theme-color" content="#ea580c">
 </head>
 <body>
 <main>
@@ -48,6 +49,8 @@
         <div class="registration-fields">
           <div class="field"><label for="business-name">Nombre profesional o comercial</label><input id="business-name" placeholder="Ej. Paseos Luna" maxlength="80"><span class="msg" aria-live="polite"></span></div>
           <div class="field"><label for="business-zone">Zona de atención</label><input id="business-zone" placeholder="Ej. Chapinero" maxlength="80"><span class="msg" aria-live="polite"></span></div>
+          <div class="field"><label for="business-address" id="business-address-label">Dirección del local</label><input id="business-address" placeholder="Ej. Cra 7 # 45-10, Chapinero" maxlength="160" autocomplete="street-address"><span class="msg" aria-live="polite"></span></div>
+          <div class="field"><label for="business-phone">Teléfono de contacto</label><input id="business-phone" type="tel" placeholder="Ej. 300 123 4567" maxlength="20" autocomplete="tel"><span class="msg" aria-live="polite"></span></div>
           <div class="field" id="business-size-row" hidden><label for="business-size">Personas en tu empresa</label><input id="business-size" type="number" min="2" max="500" value="2"><span class="msg" aria-live="polite"></span></div>
         </div>
         <label class="sr-only" for="business-desc">Descripción profesional (opcional)</label><textarea id="business-desc" class="sr-only" tabindex="-1" aria-hidden="true" placeholder="Podrás completar esto desde tu panel"></textarea>

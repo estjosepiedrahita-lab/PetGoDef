@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="PetGo">
+  <rect width="64" height="64" rx="15" fill="#ea580c"/>
+  <g fill="#fff">
+    <ellipse cx="32" cy="41" rx="12.5" ry="10.5"/>
+    <ellipse cx="14.5" cy="30" rx="5.2" ry="6.6" transform="rotate(-22 14.5 30)"/>
+    <ellipse cx="24" cy="18.5" rx="5.2" ry="7"/>
+    <ellipse cx="40" cy="18.5" rx="5.2" ry="7"/>
+    <ellipse cx="49.5" cy="30" rx="5.2" ry="6.6" transform="rotate(22 49.5 30)"/>
+  </g>
+</svg>

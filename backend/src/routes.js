@@ -4,7 +4,7 @@ const { rest, rpc } = require('./supa');
 const { ApiError } = require('./errors');
 const v = require('./validate');
 
-const BOOKING_SELECT = 'select=*,professionals(nombre)';
+const BOOKING_SELECT = 'select=*,professionals(nombre,direccion,telefono)';
 
 function eq(col, val) { return `${col}=eq.${encodeURIComponent(val)}`; }
 
@@ -24,6 +24,9 @@ function bizFields(b, create) {
     const n = v.text(b, 'nombre', { max: 80 }); if (n !== undefined) out.nombre = n;
   }
   const zona = v.text(b, 'zona', { max: 80 }); if (zona !== undefined) out.zona = zona;
+  if ('direccion' in b) out.direccion = v.text(b, 'direccion', { max: 160 }) || '';
+  const tel = v.telefono(b); if (tel !== undefined) out.telefono = tel;
+  if ('foto_path' in b) out.foto_path = v.fotoPath(b, 'foto_path', b.__uid);
   if ('descripcion' in b) out.descripcion = v.text(b, 'descripcion', { max: 350 }) || '';
   if (b.cantidad !== undefined) {
     const n = Number(b.cantidad);
@@ -31,8 +34,21 @@ function bizFields(b, create) {
     out.cantidad = n;
   }
   if (create && out.tipo === 'empresa' && (out.cantidad === undefined || out.cantidad < 2)) throw v.bad('Una empresa debe indicar al menos dos personas.');
+  if (create && out.tipo === 'empresa' && !out.direccion) throw v.bad('Una empresa debe indicar la dirección de su local.');
   if (create && out.tipo === 'individual') out.cantidad = 1;
   return out;
+}
+
+const DIA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+function addMin(hm, m) { const [h, mi] = hm.split(':').map(Number); const t = h * 60 + mi + m; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
+function h12(hm) { const [h, mi] = hm.split(':').map(Number); return ((h % 12) || 12) + ':' + String(mi).padStart(2, '0') + ' ' + (h < 12 ? 'AM' : 'PM'); }
+// "Lun–Vie" si son consecutivos, "Lun, Mié, Vie" si no
+function horarioTexto(dias, ini, fin) {
+  const ciclo = [1, 2, 3, 4, 5, 6, 0];                       // lunes a domingo
+  const pos = dias.map((d) => ciclo.indexOf(d)).sort((x, y) => x - y);
+  const seguidos = pos.length > 2 && pos.every((p, i) => i === 0 || p === pos[i - 1] + 1);
+  const txt = seguidos ? DIA[ciclo[pos[0]]] + '–' + DIA[ciclo[pos[pos.length - 1]]] : pos.map((p) => DIA[ciclo[p]]).join(', ');
+  return txt + ', ' + h12(ini) + ' – ' + h12(fin);
 }
 
 function workerFields(b, create) {
@@ -40,6 +56,7 @@ function workerFields(b, create) {
   const nombre = v.text(b, 'nombre', { required: create, max: 80 }); if (nombre !== undefined) out.nombre = nombre;
   if ('funcion' in b) out.funcion = v.text(b, 'funcion', { max: 40 }) || 'Otro';
   if ('descripcion' in b) out.descripcion = v.text(b, 'descripcion', { max: 150 }) || '';
+  if ('foto_path' in b) out.foto_path = v.fotoPath(b, 'foto_path', b.__uid);
   return out;
 }
 
@@ -59,7 +76,15 @@ function offerFields(b, create) {
     if (!Number.isInteger(n) || n < 10 || n > 600) throw v.bad('"duracion_min" debe estar entre 10 y 600 minutos.');
     out.duracion_min = n;
   }
-  const horario = v.text(b, 'horario', { required: create, max: 80 }); if (horario !== undefined) out.horario = horario;
+  if (create || b.dias !== undefined || b.hora_inicio !== undefined || b.hora_fin !== undefined) {
+    if (!Array.isArray(b.dias) || !b.dias.length || b.dias.length > 7 || !b.dias.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) || new Set(b.dias).size !== b.dias.length) throw v.bad('"dias" debe ser una lista de días (0 = domingo a 6 = sábado) sin repetir.');
+    const ini = v.horaHM(b.hora_inicio, 'hora_inicio'), fin = v.horaHM(b.hora_fin, 'hora_fin');
+    if (ini < '07:00' || fin > '20:00' || fin <= ini) throw v.bad('El horario de atención debe estar entre las 07:00 y las 20:00, y la hora final debe ser posterior a la inicial.');
+    out.dias = b.dias.slice().sort((x, y) => x - y);
+    out.hora_inicio = ini; out.hora_fin = fin;
+    if (b.duracion_min !== undefined && addMin(ini, Number(b.duracion_min)) > fin) throw v.bad('La duración del servicio no cabe en el horario de atención.');
+    out.horario = horarioTexto(out.dias, ini, fin);
+  }
   const desc = v.text(b, 'descripcion', { required: create, max: 350 }); if (desc !== undefined) out.descripcion = desc;
   if (b.disponible !== undefined) {
     if (typeof b.disponible !== 'boolean') throw v.bad('"disponible" debe ser verdadero o falso.');
@@ -90,8 +115,9 @@ const routes = [
     method: 'PATCH', path: '/api/me',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'telefono', 'ciudad']);
+      v.pickKnown(b, ['nombre', 'telefono', 'ciudad', 'foto_path']);
       const patch = {};
+      if ('foto_path' in b) patch.foto_path = v.fotoPath(b, 'foto_path', ctx.user.id);
       const nombre = v.text(b, 'nombre', { max: 80 }); if (nombre !== undefined) patch.nombre = nombre;
       if ('telefono' in b) patch.telefono = v.text(b, 'telefono', { max: 30 }) || '';
       const ciudad = v.text(b, 'ciudad', { max: 60 }); if (ciudad !== undefined) patch.ciudad = ciudad;
@@ -111,8 +137,9 @@ const routes = [
     method: 'POST', path: '/api/pets',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'especie', 'raza', 'edad', 'foto_path']);
+      v.pickKnown(b, ['nombre', 'especie', 'raza', 'edad', 'foto_path', 'descripcion']);
       const row = {
+        descripcion: v.text(b, 'descripcion', { max: 500 }) || '',
         nombre: v.text(b, 'nombre', { required: true, max: 60 }),
         especie: v.text(b, 'especie', { max: 30 }) || 'Perro',
         raza: v.text(b, 'raza', { max: 60 }) || null,
@@ -134,8 +161,9 @@ const routes = [
     handler: async (ctx) => {
       const id = v.uuid(ctx.params.id);
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'especie', 'raza', 'edad', 'foto_path']);
+      v.pickKnown(b, ['nombre', 'especie', 'raza', 'edad', 'foto_path', 'descripcion']);
       const patch = {};
+      if ('descripcion' in b) patch.descripcion = v.text(b, 'descripcion', { max: 500 }) || '';
       const nombre = v.text(b, 'nombre', { max: 60 }); if (nombre !== undefined) patch.nombre = nombre;
       if ('especie' in b) patch.especie = v.text(b, 'especie', { max: 30 }) || 'Perro';
       if ('raza' in b) patch.raza = v.text(b, 'raza', { max: 60 }) || null;
@@ -176,7 +204,8 @@ const routes = [
     method: 'POST', path: '/api/business',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['tipo', 'nombre', 'zona', 'descripcion', 'cantidad']);
+      v.pickKnown(b, ['tipo', 'nombre', 'zona', 'descripcion', 'cantidad', 'direccion', 'telefono', 'foto_path']);
+      b.__uid = ctx.user.id;
       const row = bizFields(b, true);
       const rows = await rest(ctx.cfg, ctx.token, { method: 'POST', table: 'businesses', query: 'select=*', body: row, prefer: 'return=representation' });
       return { status: 201, body: rows[0] };
@@ -186,10 +215,16 @@ const routes = [
     method: 'PATCH', path: '/api/business',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'zona', 'descripcion', 'cantidad']);
+      v.pickKnown(b, ['nombre', 'zona', 'descripcion', 'cantidad', 'direccion', 'telefono', 'foto_path']);
+      b.__uid = ctx.user.id;
       const patch = bizFields(b, false);
       if (!Object.keys(patch).length) throw v.bad('No hay nada que actualizar.');
-      const rows = await rest(ctx.cfg, ctx.token, { method: 'PATCH', table: 'businesses', query: 'select=*', body: patch, prefer: 'return=representation' });
+      const id = await myBusinessId(ctx);   // la base exige indicar la fila (WHERE) en cada UPDATE
+      if (patch.direccion === '' ) {
+        const cur = (await rest(ctx.cfg, ctx.token, { table: 'businesses', query: `select=tipo&${eq('id', id)}` }))[0];
+        if (cur && cur.tipo === 'empresa') throw v.bad('Una empresa debe tener la dirección de su local.');
+      }
+      const rows = await rest(ctx.cfg, ctx.token, { method: 'PATCH', table: 'businesses', query: `${eq('id', id)}&select=*`, body: patch, prefer: 'return=representation' });
       if (!rows.length) throw new ApiError(404, 'sin_negocio', 'Todavía no tienes un negocio creado.');
       return { body: rows[0] };
     }
@@ -202,7 +237,8 @@ const routes = [
     method: 'POST', path: '/api/business/workers',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'funcion', 'descripcion']);
+      v.pickKnown(b, ['nombre', 'funcion', 'descripcion', 'foto_path']);
+      b.__uid = ctx.user.id;
       const row = Object.assign(workerFields(b, true), { business_id: await myBusinessId(ctx) });
       const rows = await rest(ctx.cfg, ctx.token, { method: 'POST', table: 'workers', query: 'select=*', body: row, prefer: 'return=representation' });
       return { status: 201, body: rows[0] };
@@ -213,7 +249,8 @@ const routes = [
     handler: async (ctx) => {
       const id = v.uuid(ctx.params.id);
       const b = body(ctx);
-      v.pickKnown(b, ['nombre', 'funcion', 'descripcion']);
+      v.pickKnown(b, ['nombre', 'funcion', 'descripcion', 'foto_path']);
+      b.__uid = ctx.user.id;
       const patch = workerFields(b, false);
       if (!Object.keys(patch).length) throw v.bad('No hay nada que actualizar.');
       const rows = await rest(ctx.cfg, ctx.token, { method: 'PATCH', table: 'workers', query: `${eq('id', id)}&select=*`, body: patch, prefer: 'return=representation' });
@@ -238,7 +275,7 @@ const routes = [
     method: 'POST', path: '/api/business/offers',
     handler: async (ctx) => {
       const b = body(ctx);
-      v.pickKnown(b, ['servicio', 'precio', 'duracion_min', 'horario', 'descripcion', 'disponible']);
+      v.pickKnown(b, ['servicio', 'precio', 'duracion_min', 'dias', 'hora_inicio', 'hora_fin', 'descripcion', 'disponible']);
       const row = Object.assign(offerFields(b, true), { business_id: await myBusinessId(ctx) });
       const rows = await rest(ctx.cfg, ctx.token, { method: 'POST', table: 'professionals', query: 'select=*', body: row, prefer: 'return=representation' });
       return { status: 201, body: rows[0] };
@@ -249,7 +286,7 @@ const routes = [
     handler: async (ctx) => {
       const id = v.slug(ctx.params.id, 'id');
       const b = body(ctx);
-      v.pickKnown(b, ['servicio', 'precio', 'duracion_min', 'horario', 'descripcion', 'disponible']);
+      v.pickKnown(b, ['servicio', 'precio', 'duracion_min', 'dias', 'hora_inicio', 'hora_fin', 'descripcion', 'disponible']);
       const patch = offerFields(b, false);
       if (!Object.keys(patch).length) throw v.bad('No hay nada que actualizar.');
       const rows = await rest(ctx.cfg, ctx.token, { method: 'PATCH', table: 'professionals', query: `${eq('id', id)}&business_id=not.is.null&select=*`, body: patch, prefer: 'return=representation' });
@@ -296,6 +333,16 @@ const routes = [
       const rows = await rest(cfg, token, { table: 'professionals', query: `select=*&${eq('id', id)}` });
       if (!rows.length) throw new ApiError(404, 'no_encontrado', 'No se encontró el profesional.');
       return { body: rows[0] };
+    }
+  },
+  {
+    method: 'GET', path: '/api/professionals/:id/workers', auth: 'optional',
+    handler: async ({ cfg, token, params }) => {
+      const id = v.slug(params.id, 'id');
+      const pro = await rest(cfg, token, { table: 'professionals', query: `select=business_id&${eq('id', id)}` });
+      if (!pro.length) throw new ApiError(404, 'no_encontrado', 'No se encontró el profesional.');
+      if (!pro[0].business_id) return { body: [] };
+      return { body: await rest(cfg, token, { table: 'workers', query: `select=id,nombre,funcion,descripcion,foto_path&${eq('business_id', pro[0].business_id)}&order=created_at.asc` }) };
     }
   },
   {

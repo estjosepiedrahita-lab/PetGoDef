@@ -89,18 +89,7 @@
     S.perfil={nombre:"Usuario de demostración",correo:"demo@petgo.local",telefono:"",ciudad:"Bogotá"};
     S.pets=[{id:"p-max",nombre:"Max",especie:"Perro",raza:"Golden Retriever",edad:"3",foto:""},{id:"p-luna",nombre:"Luna",especie:"Perro",raza:"Poodle",edad:"2",foto:""}];
     S.reservas=[];S.notifs=[];
-    S.pros=[
-      {id:"happy-walk",nombre:"Happy Walk",tipo:"individual",servicio:"paseo",precio:18000,duracion_min:30,descripcion:"Paseos individuales y personalizados con acompañamiento durante todo el recorrido.",detalle:"Paseos personalizados para tu mascota.",horario:"Lun–Sáb, 7:00–19:00",zona:"Usaquén",rating:4.8,resenas:96,disponible:true},
-      {id:"paseos-petgo",nombre:"Paseos PetGo",tipo:"empresa",trabajadores:4,servicio:"paseo",precio:20000,duracion_min:30,descripcion:"Paseos supervisados con seguimiento GPS y un equipo de cuidadores.",horario:"Lun–Sáb, 7:00–19:00",zona:"Chapinero",rating:4.9,resenas:128,disponible:true},
-      {id:"patitas-felices",nombre:"Patitas Felices",tipo:"empresa",trabajadores:6,servicio:"paseo",precio:22000,duracion_min:45,descripcion:"Paseos grupales e individuales con paseadores capacitados.",horario:"Lun–Vie, 8:00–17:00",zona:"Suba",rating:4.7,resenas:74,disponible:false},
-      {id:"petgo-grooming",nombre:"PetGo Grooming",tipo:"empresa",trabajadores:3,servicio:"bano",precio:35000,duracion_min:90,descripcion:"Baños y peluquería profesional para mascotas.",horario:"Lun–Sáb, 8:00–18:00",zona:"Chapinero",rating:4.9,resenas:142,disponible:true},
-      {id:"spa-canino",nombre:"Spa Canino Bogotá",tipo:"individual",servicio:"bano",precio:28000,duracion_min:60,descripcion:"Baños individuales con productos suaves y cuidado personalizado.",horario:"Mar–Sáb, 9:00–17:00",zona:"Usaquén",rating:4.8,resenas:96,disponible:true}
-    ];
-    S.pros=S.pros.map(function(p){return Object.assign({},p,readLocal("petgo_offer_"+p.id,{}));});
-    var b=readLocal("petgo_business",null);
-    if(b) readLocal("petgo_business_offers",[]).forEach(function(o){
-      S.pros.push({id:o.id,nombre:b.nombre,tipo:b.tipo,trabajadores:(b.empleados||[]).length,servicio:o.servicio,precio:+o.precio,duracion_min:+o.duracion_min,descripcion:o.descripcion,detalle:o.descripcion,horario:o.horario,zona:b.zona,disponible:o.disponible,rating:0,resenas:0});
-    });
+    S.pros=[];
   }
   /* ================= Capa de datos =================
      Si window.PETGO_API_URL está definido, los datos pasan por la API propia (backend/).
@@ -114,6 +103,8 @@
     var code = /23505|duplicate|bookings_slot_unico/i.test(m) ? "horario_ocupado"
       : /LIMITE_RESERVAS/.test(m) ? "limite_reservas"
       : /FECHA_PASADA/.test(m) ? "fecha_pasada"
+      : /FUERA_DE_HORARIO/.test(m) ? "fuera_de_horario"
+      : /DIRECCION_REQUERIDA/.test(m) ? "direccion_requerida"
       : /RESERVA_CANCELADA/.test(m) ? "reserva_cancelada" : "error";
     return { data: null, error: { code: code, message: res.error.message, raw: res.error } };
   }
@@ -152,6 +143,7 @@
       }
     },
     citas: { list: function () { return sbq(sb.rpc("provider_bookings")); } },
+    team: function (businessId) { return sbq(sb.from("workers").select("id,nombre,funcion,descripcion,foto_path").eq("business_id", businessId).order("created_at", { ascending: true })); },
     bookings: {
       list: function () { return sbq(sb.from("bookings").select("*, professionals(nombre)").order("fecha", { ascending: true }).order("hora", { ascending: true })); },
       create: function (o) {
@@ -216,6 +208,7 @@
       remove: function (id) { return call("DELETE", "/api/business/offers/" + encodeURIComponent(id)); }
     },
     citas: { list: function () { return call("GET", "/api/business/bookings"); } },
+    team: function (businessId, proId) { return call("GET", "/api/professionals/" + encodeURIComponent(proId) + "/workers"); },
     bookings: {
       list: function () { return call("GET", "/api/bookings"); },
       create: function (o) { return call("POST", "/api/bookings", o); },
@@ -233,9 +226,44 @@
   var D = API_URL ? viaApi : viaSb;
 
   function petUrl(path) { return path ? sb.storage.from("pet-photos").getPublicUrl(path).data.publicUrl : ""; }
-  function mapPet(r) { return { id: r.id, nombre: r.nombre, especie: r.especie, raza: r.raza, edad: r.edad, path: r.foto_path, foto: petUrl(r.foto_path) }; }
+  // Fotos de perfil, de negocio y de equipo (bucket público aparte)
+  function profileUrl(path) { return path && sb ? sb.storage.from("profile-photos").getPublicUrl(path).data.publicUrl : ""; }
+  // Reduce la imagen a 640 px y la devuelve como JPEG; la sube a la carpeta del usuario y devuelve la ruta
+  function shrinkImage(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type)) { reject(new Error("Selecciona una imagen válida.")); return; }
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 640 / Math.max(im.width, im.height)), cv = document.createElement("canvas");
+        cv.width = Math.round(im.width * k); cv.height = Math.round(im.height * k);
+        cv.getContext("2d").drawImage(im, 0, 0, cv.width, cv.height);
+        URL.revokeObjectURL(url);
+        cv.toBlob(function (b) { b ? resolve(b) : reject(new Error("No se pudo procesar la imagen.")); }, "image/jpeg", 0.85);
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); reject(new Error("No se pudo leer esa imagen.")); };
+      im.src = url;
+    });
+  }
+  async function uploadProfilePhoto(file) {
+    var blob = await shrinkImage(file);
+    var path = S.uid + "/" + uuid() + ".jpg";
+    var up = await sb.storage.from("profile-photos").upload(path, blob, { contentType: "image/jpeg" });
+    if (up.error) throw up.error;
+    return path;
+  }
+  function removeProfilePhoto(path) { if (path && sb) sb.storage.from("profile-photos").remove([path]); }
+  // Pinta una foto dentro de un contenedor (avatar, caja, etc.); si no carga, deja el contenido de respaldo
+  function paintPhoto(el, url, alt) {
+    if (!el) return;
+    if (!url) { el.classList.remove("has-img"); return; }
+    var im = h("img"), orig = el.textContent; im.src = url; im.alt = alt || ""; im.loading = "lazy";
+    im.onerror = function () { im.remove(); el.classList.remove("has-img"); el.textContent = orig; };
+    el.classList.add("has-img"); el.textContent = ""; el.appendChild(im);
+  }
+  function mapPet(r) { return { id: r.id, nombre: r.nombre, especie: r.especie, raza: r.raza, edad: r.edad, descripcion: r.descripcion || "", path: r.foto_path, foto: petUrl(r.foto_path) }; }
   function mapRes(r) {
     return { id: r.id, professional_id: r.professional_id, servicio: r.servicio, profesional: (r.professionals || {}).nombre || "",
+      direccion: (r.professionals || {}).direccion || "", telefono: (r.professionals || {}).telefono || "",
       mascota: r.pet_nombre, fecha: fmtFecha(r.fecha), hora: fmtHora(r.hora), duracion: r.duracion_min + " min", precio: money(r.precio), estado: r.estado };
   }
   function mapNotif(r) { return { id: r.id, texto: r.texto, t: Date.parse(r.created_at), leida: r.leida }; }
@@ -251,7 +279,8 @@
     var p = rs[0].data || {};
     S.perfil = {
       nombre: p.nombre || meta.nombre || meta.full_name || meta.name || (u.email || "").split("@")[0],
-      correo: p.correo || u.email || "", telefono: p.telefono || "", ciudad: p.ciudad || "Bogotá"
+      correo: p.correo || u.email || "", telefono: p.telefono || "", ciudad: p.ciudad || "Bogotá",
+      fotoPath: p.foto_path || null, foto: profileUrl(p.foto_path)
     };
     S.pets = rs[1].data.map(mapPet);
     S.reservas = rs[2].data.map(mapRes);
@@ -303,7 +332,7 @@
     } catch (e) { /* sin almacenamiento */ }
     return null;
   }
-  function paintNav(nombre, unread) {
+  function paintNav(nombre, unread, foto) {
     $$(".bell").forEach(function (b) {
       var c = $(".count", b);
       if (!unread) { if (c) c.remove(); }
@@ -311,7 +340,10 @@
     });
     if (nombre) {
       $$(".js-name").forEach(function (e) { e.textContent = nombre; });
-      $$(".js-initial").forEach(function (e) { e.textContent = nombre.charAt(0).toUpperCase(); });
+      $$(".js-initial").forEach(function (e) {
+        if (foto) paintPhoto(e, foto, nombre);
+        else { e.classList.remove("has-img"); e.textContent = nombre.charAt(0).toUpperCase(); }
+      });
     }
   }
   function clearNavCache() { try { localStorage.removeItem(CACHE_KEY); } catch (e) { /* ignorar */ } }
@@ -319,15 +351,15 @@
     try {
       var c = JSON.parse(localStorage.getItem(CACHE_KEY) || "null");
       var uid = currentUid();
-      if (c && uid && c.uid === uid) paintNav(c.nombre, c.unread);
+      if (c && uid && c.uid === uid) paintNav(c.nombre, c.unread, c.foto);
     } catch (e) { /* ignorar */ }
   })();
 
   function refreshNav() {
     var n = S.notifs.filter(function (x) { return !x.leida; }).length;
     var nombre = S.perfil.nombre || "Usuario";
-    paintNav(nombre, n);
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: S.uid, nombre: nombre, unread: n })); } catch (e) { /* ignorar */ }
+    paintNav(nombre, n, S.perfil.foto);
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ uid: S.uid, nombre: nombre, unread: n, foto: S.perfil.foto || "" })); } catch (e) { /* ignorar */ }
   }
 
   /* ---------- fotos de assets/img (si existen) ---------- */
@@ -403,7 +435,10 @@
         if (!businessName) { fail("Escribe el nombre comercial o profesional."); return; }
         var cant = Number($("#business-size").value);
         if (tipo === "empresa" && (!Number.isInteger(cant) || cant < 2 || cant > 500)) { fail("Una empresa debe indicar entre 2 y 500 personas."); return; }
-        negocio = { tipo: tipo, nombre: businessName, zona: $("#business-zone").value.trim() || "Bogotá", descripcion: ($("#business-desc").value || "").trim() };
+        var direccion = $("#business-address").value.trim(), telefono = $("#business-phone").value.trim();
+        if (tipo === "empresa" && !direccion) { fail("Una empresa debe indicar la dirección de su local."); return; }
+        if (telefono && !/^[0-9+()\s-]{7,20}$/.test(telefono)) { fail("Revisa el teléfono: solo números, espacios, + ( ) y guiones."); return; }
+        negocio = { tipo: tipo, nombre: businessName, zona: $("#business-zone").value.trim() || "Bogotá", descripcion: ($("#business-desc").value || "").trim(), direccion: direccion, telefono: telefono };
         if (tipo === "empresa") negocio.cantidad = cant;
         // Se guarda para crear el negocio la primera vez que se abre el panel (también sirve si hay que confirmar el correo)
         try { localStorage.setItem("petgo_business_pending", JSON.stringify(negocio)); } catch (er) { /* ignorar */ }
@@ -458,14 +493,21 @@
     var all = S.pros.filter(function (p) { return p.servicio === svc; });
     var filter = $("#provider-filter"), order = $("#provider-sort");
     var list = all.filter(function (p) { return !filter || filter.value === "todos" || (filter.value === "disponibles" ? isAvailable(p) : (filter.value === "individual" ? providerKind(p).includes("independiente") : providerKind(p).includes("Empresa"))); });
-    if (order) list.sort(function (a,b) { return order.value === "precio" ? a.precio-b.precio : order.value === "calificacion" ? b.rating-a.rating : String(a.zona).localeCompare(String(b.zona)); });
-    var cnt = $("#res-count"); if (cnt) cnt.textContent = all.length + " ofertas de " + (svc === "paseo" ? "paseos" : "baño y peluquería") + " en Bogotá. Compara precios, profesionales y disponibilidad.";
+    if (order) list.sort(function (a,b) { return order.value === "precio" ? a.precio-b.precio : order.value === "calificacion" ? b.rating-a.rating : String(a.nombre).localeCompare(String(b.nombre)); });
+    var cnt = $("#res-count"); if (cnt) cnt.textContent = all.length ? all.length + (all.length === 1 ? " oferta de " : " ofertas de ") + (svc === "paseo" ? "paseos" : "baño y peluquería") + ". Compara precios, profesionales y disponibilidad." : "Todavía no hay ofertas publicadas.";
     box.innerHTML = "";
+    if (!all.length) {
+      var em = h("div", "empty-catalog");
+      add(em, h("div", "big", svc === "paseo" ? "🐕" : "🛁"), h("h2", "h3", "Aún no hay profesionales en esta categoría"), h("p", "hist-note", "Cuando un proveedor registrado publique este servicio, aparecerá aquí."));
+      box.appendChild(em); return;
+    }
     if (!list.length) { box.appendChild(h("p", "hist-note", "No hay ofertas para este filtro. Prueba otra opción.")); return; }
     list.forEach(function (p) {
       var card = h("article", "offer-card");
       var top = h("div", "offer-top"), ico=h("div", "offer-avatar", svc === "paseo" ? "🐕" : "🛁"), info=h("div", "offer-identity");
-      add(info, h("h2", "offer-name", p.nombre), h("span", "offer-kind", providerKind(p)), h("p", "offer-meta", "⭐ " + (p.resenas ? p.rating + " (" + p.resenas + " reseñas)" : "Nuevo") + "  ·  📍 " + p.zona));
+      if (p.foto_path) paintPhoto(ico, profileUrl(p.foto_path), p.nombre);
+      add(info, h("h2", "offer-name", p.nombre), h("span", "offer-kind", providerKind(p)), h("p", "offer-meta", "⭐ " + (p.resenas ? p.rating + " (" + p.resenas + " reseñas)" : "Nuevo") + "  ·  📍 " + (p.direccion ? p.direccion + ", " : "") + p.zona));
+      if (p.horario) add(info, h("p", "offer-meta", "🕒 " + p.horario));
       add(top, ico, info, h("span", "badge " + (isAvailable(p)?"ok":"no"), isAvailable(p)?"Disponible":"Sin cupos"));
       var foot=h("div", "offer-bottom"), price=h("div", "offer-price"), link=h("a", "btn sm" + (isAvailable(p)?"":" sec"), isAvailable(p)?"Ver oferta":"Ver perfil");
       add(price, h("small", null, "Desde"), h("strong", null, money(p.precio)), h("small", null, p.duracion_min + " minutos por sesión"));
@@ -477,7 +519,14 @@
   }
   function renderDetalle() {
     var root = $(".detail[data-default]"); if (!root) return;
-    var p = getPro(query("pro")) || getPro(root.dataset.default); if (!p) return;
+    var p = getPro(query("pro")); 
+    if (!p) {
+      var info0 = $(".detail .info");
+      if (info0) { info0.innerHTML = ""; var em = h("div", "empty-catalog"), back = h("a", "btn", "Ver profesionales"); back.href = /banos/.test(PAGE) ? "resultados-banos.html" : "resultados-paseos.html";
+        add(em, h("div", "big", "🐾"), h("h2", "h3", "Este profesional no está disponible"), h("p", "hist-note", "Puede que ya no ofrezca este servicio."), back); info0.appendChild(em); }
+      var bk = $(".detail .book"); if (bk) bk.hidden = true;
+      return;
+    }
     var vals = { nombre:p.nombre, rating:p.resenas?String(p.rating):"Nuevo", meta:"(" + p.resenas + " reseñas) · Bogotá", precio:money(p.precio), duracion:p.duracion_min+" min", zona:p.zona, detalle:p.detalle||p.descripcion, horario:p.horario||"Consultar disponibilidad" };
     $$('[data-d]').forEach(function(el) { el.textContent=vals[el.dataset.d]; });
     document.title=p.nombre+" · PetGo";
@@ -490,7 +539,33 @@
       a.textContent="Reserva disponible al conectar el backend";
       a.removeAttribute("href"); a.setAttribute("aria-disabled","true"); a.classList.add("disabled");
     }
-    var ph=$("#d-photo"); if(ph) ph.setAttribute("data-img","assets/img/pro-"+p.id+".jpg");
+    var ph=$("#d-photo");
+    if(ph && p.foto_path) { var u=profileUrl(p.foto_path), im=h("img"); im.src=u; im.alt=p.nombre; im.onerror=function(){ im.remove(); ph.classList.remove("has-img"); }; ph.classList.add("has-img"); ph.appendChild(im); }
+    var dir=$("#d-lugar");
+    if(dir && p.direccion) {
+      dir.hidden=false; $("#d-direccion").textContent=p.direccion + (p.zona ? " · " + p.zona : "");
+      $("#d-mapa").href="https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(p.direccion+", "+(p.zona||"")+", Bogotá, Colombia");
+    }
+    var con=$("#d-contacto");
+    if(con && p.telefono) {
+      var digits=String(p.telefono).replace(/\D/g,""); if(digits.length===10) digits="57"+digits;
+      con.hidden=false; var tel=$("#d-tel"); tel.textContent=p.telefono; tel.href="tel:"+p.telefono.replace(/[^\d+]/g,"");
+      $("#d-wa").href="https://wa.me/"+digits+"?text="+encodeURIComponent("Hola, vi tu servicio en PetGo y quisiera más información.");
+    }
+    if(p.business_id && !DEMO) {
+      D.team(p.business_id, p.id).then(function(r){
+        if(r.error || !r.data || !r.data.length) return;
+        var box=$("#d-equipo-lista"); if(!box) return; box.innerHTML="";
+        r.data.forEach(function(w){
+          var c=h("div","team-card"), av=h("span","avatar",(w.nombre||"?").charAt(0).toUpperCase()), t=h("div");
+          if(w.foto_path) paintPhoto(av, profileUrl(w.foto_path), w.nombre);
+          add(t,h("b",null,w.nombre),h("small",null,w.funcion||""));
+          if(w.descripcion) add(t,h("small",null,w.descripcion));
+          add(c,av,t); box.appendChild(c);
+        });
+        $("#d-equipo").hidden=false;
+      });
+    }
   }
 
   /* ================= Reserva: inicio y mascota ================= */
@@ -546,25 +621,55 @@
     var bk0 = getBooking();
     var back = $("#back-fecha");
     if (back && bk0.reprogramar) back.setAttribute("href", "detalle-de-reserva.html?id=" + encodeURIComponent(bk0.reprogramar));
-    var proId = bk0.profesionalId || "happy-walk";
+    var proId = bk0.profesionalId || "";
+    var pro = getPro(proId);
+    if (!pro) { location.replace("servicios.html"); return; }
+    var DIAS_CORTO = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+    function trabaja(dow) { return !pro.dias || pro.dias.indexOf(dow) !== -1; }
+    function minutos(t) { var p = String(t).split(":"); return (+p[0]) * 60 + (+p[1]); }
+    // Horas de inicio posibles ese día: cada 60 min desde que abre, mientras la sesión termine antes de cerrar
+    function horasDelDia() {
+      var ini = pro.hora_inicio ? minutos(pro.hora_inicio) : 7 * 60, fin = pro.hora_fin ? minutos(pro.hora_fin) : 20 * 60, out = [];
+      for (var t = ini; t + (+pro.duracion_min || 30) <= fin && t <= 19 * 60; t += 60) out.push(t);
+      return out;
+    }
+    function etiqueta(t) { var H = Math.floor(t / 60), M = t % 60; return ((H % 12) || 12) + ":" + pad(M) + " " + (H >= 12 ? "PM" : "AM"); }
 
     var today = new Date(); today.setHours(0, 0, 0, 0);
     var months = [0, 1, 2].map(function (i) { var d = new Date(today.getFullYear(), today.getMonth() + i, 1); return { y: d.getFullYear(), m: d.getMonth() }; });
     var idx = 0, selected = null;
-    var preSel = $(".slot.sel[data-hora]");
-    var hora = preSel ? preSel.dataset.hora : null;
+    var hora = null;
     var title = $(".mt", calRoot), prev = $("#cal-prev"), nextBtn = $("#cal-next");
     var days = $(".cal-days", calRoot), selTxt = $("#cal-sel-text");
-    var slots = $$(".slot[data-hora]");
+    var slots = [];
+    var grid = $("#slot-grid"), note = $("#slot-note");
+    if (note && pro.horario) note.textContent = "Horario de atención: " + pro.horario + ". Elige una fecha para ver las horas; las tachadas ya están ocupadas.";
     var reqId = 0;
+
+    function buildSlots() {
+      grid.innerHTML = ""; slots = []; hora = null;
+      if (!selected) return;
+      var dow = new Date(selected.y, selected.m, selected.d).getDay();
+      var horas = trabaja(dow) ? horasDelDia() : [];
+      if (!horas.length) { grid.appendChild(h("p", "slot-empty", "Este profesional no atiende ese día. Elige otra fecha.")); return; }
+      horas.forEach(function (t) {
+        var b = h("button", "slot", etiqueta(t)); b.type = "button"; b.dataset.hora = etiqueta(t);
+        b.addEventListener("click", function () {
+          if (b.disabled) return;
+          slots.forEach(function (x) { x.classList.remove("sel"); });
+          b.classList.add("sel"); hora = b.dataset.hora; selTxt.classList.remove("warn");
+        });
+        grid.appendChild(b); slots.push(b);
+      });
+    }
 
     function fechaStr(s) { return s.d + " de " + MESES[s.m] + " de " + s.y; }
     function fechaIso(s) { return s.y + "-" + pad(s.m + 1) + "-" + pad(s.d); }
 
     async function refreshSlots() {
       var my = ++reqId;
-      slots.forEach(function (s) { if (s.classList.contains("dyn")) { s.classList.remove("off", "dyn"); s.disabled = false; } });
-      if (!selected) return;
+      buildSlots();
+      if (!selected || !slots.length) return;
       var r = await D.slots(proId, fechaIso(selected));
       if (my !== reqId || r.error) return;
       var ocupadas = (r.data || []).map(function (t) { return String(t).slice(0, 5); });
@@ -590,7 +695,7 @@
       var i, d;
       for (i = 0; i < first; i++) days.appendChild(document.createElement("div"));
       for (d = 1; d <= total; d++) {
-        var disabled = new Date(cur.y, cur.m, d) < today;
+        var disabled = new Date(cur.y, cur.m, d) < today || !trabaja(new Date(cur.y, cur.m, d).getDay());
         var el = document.createElement(disabled ? "div" : "button");
         el.textContent = d;
         if (disabled) {
@@ -614,16 +719,6 @@
     prev.addEventListener("click", function () { if (idx > 0) { idx--; render(); } });
     nextBtn.addEventListener("click", function () { if (idx < months.length - 1) { idx++; render(); } });
     render();
-
-    slots.forEach(function (s) {
-      s.addEventListener("click", function () {
-        if (s.disabled) return;
-        slots.forEach(function (x) { x.classList.remove("sel"); });
-        s.classList.add("sel");
-        hora = s.dataset.hora;
-        selTxt.classList.remove("warn");
-      });
-    });
 
     $("#cal-ok").addEventListener("click", function (e) {
       if (!selected || !hora) {
@@ -655,7 +750,7 @@
         if (rid && (r = getRes(rid))) {
           res = await D.bookings.update(rid, { fecha: fecha, hora: hr });
         } else {
-          var pro = getPro(b.profesionalId || "happy-walk");
+          var pro = getPro(b.profesionalId);
           if (!pro) { confirmBtn.classList.remove("disabled"); fail("Elige primero un profesional."); return; }
           var pet = petByName(v.mascota);
           res = await D.bookings.create({ professional_id: pro.id, pet_id: pet ? pet.id : null, pet_nombre: v.mascota, fecha: fecha, hora: hr });
@@ -666,6 +761,7 @@
           if (code === "horario_ocupado") { location.href = "estado-horario-ocupado.html"; return; }
           if (code === "limite_reservas") { location.href = "estado-limite-de-reservas.html"; return; }
           if (code === "fecha_pasada") { fail("Esa fecha ya pasó. Elige otra."); return; }
+          if (code === "fuera_de_horario") { fail("Ese día u hora está fuera del horario de atención del profesional. Elige otro horario."); return; }
           if (code === "reserva_cancelada") { fail("Esa reserva ya está cancelada."); return; }
           fail(code === "sin_conexion" ? res.error.message : "No se pudo guardar la reserva. Intenta de nuevo.", res.error);
           return;
@@ -744,6 +840,7 @@
       return;
     }
     $$("[data-res]").forEach(function (el) { if (res[el.dataset.res]) el.textContent = res[el.dataset.res]; });
+    $$("[data-row]").forEach(function (row) { row.hidden = !res[row.dataset.row]; });
     var cancelled = res.estado === "cancelada" || resBadge.dataset.force === "cancelada";
     resBadge.className = "badge " + (cancelled ? "cancel" : "next");
     resBadge.textContent = cancelled ? "Cancelada" : "Próxima";
@@ -814,7 +911,7 @@
     var form = $("#pet-form");
     if (!form) return;
     var list = $("#pet-list"), count = $("#pet-count");
-    var fNombre = $("#f-nombre"), fEsp = $("#f-especie"), fRaza = $("#f-raza"), fEdad = $("#f-edad");
+    var fNombre = $("#f-nombre"), fEsp = $("#f-especie"), fRaza = $("#f-raza"), fEdad = $("#f-edad"), fDesc = $("#f-desc");
     var fFoto = $("#f-foto"), fotoTx = $("#foto-tx"), delBtn = $("#btn-delete-pet"), saveBtn = $("#save-pet");
     var current = null, fotoBlob = null, saving = false;
 
@@ -826,6 +923,7 @@
         var row = h("div", "pet-line"), info = h("div", "pet-line-info"), edit = h("button", "btn sec sm", "Editar");
         edit.type = "button";
         add(info, h("strong", null, p.nombre), h("span", null, (p.raza || p.especie || "Mascota") + " · " + (p.edad || "Edad no indicada") + " · " + (p.especie || "Perro")));
+        if (p.descripcion) add(info, h("small", null, p.descripcion));
         edit.addEventListener("click", function () { openForm(p); });
         add(row, petIcon(p), info, edit);
         list.appendChild(row);
@@ -841,7 +939,7 @@
       saveBtn.textContent = p ? "Guardar cambios" : "Guardar mascota";
       delBtn.hidden = !p;
       fNombre.value = p ? p.nombre : ""; fEsp.value = p ? (p.especie || "Perro") : "Perro";
-      fRaza.value = p ? (p.raza || "") : ""; fEdad.value = p ? (p.edad || "") : "";
+      fRaza.value = p ? (p.raza || "") : ""; fEdad.value = p ? (p.edad || "") : ""; fDesc.value = p ? (p.descripcion || "") : "";
       fFoto.value = ""; fotoTx.textContent = p && p.foto ? "Cambiar foto" : "Subir foto (opcional)";
       form.scrollIntoView({ behavior: "smooth", block: "center" });
       fNombre.focus({ preventScroll: true });
@@ -897,7 +995,7 @@
           if (up.error) { fail("No se pudo subir la foto.", up.error); path = null; }
         }
         var esp = fEsp.value.trim() || "Perro";
-        var data = { nombre: nombre, especie: esp, raza: fRaza.value.trim() || esp, edad: edad || null };
+        var data = { nombre: nombre, especie: esp, raza: fRaza.value.trim() || esp, edad: edad || null, descripcion: fDesc.value.trim() };
         var r;
         if (current) {
           if (path) data.foto_path = path;
@@ -962,22 +1060,51 @@
     var K = ["nombre", "correo", "telefono", "ciudad"];
     var P = { nombre: $("#p-nombre"), correo: $("#p-correo"), telefono: $("#p-tel"), ciudad: $("#p-ciudad") };
     var V = { nombre: $("#v-nombre"), correo: $("#v-correo"), telefono: $("#v-tel"), ciudad: $("#v-ciudad") };
+    var fotoNueva = null, quitarFoto = false, vistaPrevia = null;
+    var fIn = $("#p-foto"), fPrev = $("#p-foto-prev"), fDel = $("#p-foto-quitar");
+    function paintFoto() {
+      var ini = (S.perfil.nombre || "A").charAt(0).toUpperCase();
+      [$("#v-inicial"), fPrev].forEach(function (el) {
+        if (!el) return;
+        el.classList.remove("has-img"); el.textContent = ini;
+        var url = vistaPrevia || (!quitarFoto && S.perfil.foto) || "";
+        if (url) paintPhoto(el, url, S.perfil.nombre);
+      });
+      if (fDel) fDel.hidden = !(vistaPrevia || (!quitarFoto && S.perfil.fotoPath));
+    }
     function paint() {
       K.forEach(function (k) { V[k].textContent = S.perfil[k] || "—"; P[k].value = S.perfil[k] || ""; });
-      $("#v-inicial").textContent = (S.perfil.nombre || "A").charAt(0).toUpperCase();
+      paintFoto();
     }
     paint();
+    if (fIn) fIn.addEventListener("change", function () {
+      var f = fIn.files && fIn.files[0]; if (!f) return;
+      if (!/^image\//.test(f.type)) { toast("Selecciona una imagen válida.", true); fIn.value = ""; return; }
+      if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
+      fotoNueva = f; quitarFoto = false; vistaPrevia = URL.createObjectURL(f); paintFoto();
+    });
+    if (fDel) fDel.addEventListener("click", function () {
+      if (vistaPrevia) URL.revokeObjectURL(vistaPrevia);
+      fotoNueva = null; vistaPrevia = null; quitarFoto = true; if (fIn) fIn.value = ""; paintFoto();
+    });
+    function resetFoto() { if (vistaPrevia) URL.revokeObjectURL(vistaPrevia); fotoNueva = null; vistaPrevia = null; quitarFoto = false; if (fIn) fIn.value = ""; }
     P.correo.readOnly = true;   // el correo es el de la cuenta; cambiarlo requiere verificación
     function open() { card.classList.add("open"); editRow.hidden = true; flash.classList.remove("show"); }
     function close() { card.classList.remove("open"); editRow.hidden = false; }
     editRow.addEventListener("click", open);
-    $("#edit-cancel").addEventListener("click", function () { paint(); close(); });
+    $("#edit-cancel").addEventListener("click", function () { resetFoto(); paint(); close(); });
     $("#edit-save").addEventListener("click", async function () {
       var patch = { nombre: P.nombre.value.trim() || S.perfil.nombre, telefono: P.telefono.value.trim(), ciudad: P.ciudad.value.trim() || S.perfil.ciudad };
+      var viejo = S.perfil.fotoPath, nuevoPath = null;
+      try {
+        if (fotoNueva) { nuevoPath = await uploadProfilePhoto(fotoNueva); patch.foto_path = nuevoPath; }
+        else if (quitarFoto) patch.foto_path = null;
+      } catch (er) { fail("No se pudo subir la foto.", er); return; }
       var r = await D.me.update(patch);
-      if (r.error) { fail("No se pudieron guardar los cambios.", r.error); return; }
+      if (r.error) { removeProfilePhoto(nuevoPath); fail("No se pudieron guardar los cambios.", r.error); return; }
       S.perfil.nombre = patch.nombre; S.perfil.telefono = patch.telefono; S.perfil.ciudad = patch.ciudad;
-      paint(); refreshNav(); close(); flash.classList.add("show");
+      if ("foto_path" in patch) { S.perfil.fotoPath = patch.foto_path; S.perfil.foto = profileUrl(patch.foto_path); if (viejo) removeProfilePhoto(viejo); }
+      resetFoto(); paint(); refreshNav(); close(); flash.classList.add("show");
     });
     var out = $("#btn-logout");
     if (out) out.addEventListener("click", async function (e) {
@@ -1001,6 +1128,7 @@
   /* ================= Panel de proveedores (lo dibuja petgo-extra.js) ================= */
   var readyResolve;
   window.PetGo = {
+    profileUrl: profileUrl, uploadPhoto: uploadProfilePhoto, removePhoto: removeProfilePhoto, paintPhoto: paintPhoto,
     ready: new Promise(function (res) { readyResolve = res; }),
     logout: async function () {
       try { sessionStorage.removeItem(BK_KEY); sessionStorage.removeItem("petgo_preview"); } catch (er) { /* ignorar */ }

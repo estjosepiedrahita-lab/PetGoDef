@@ -9,6 +9,12 @@ const cfgMod = require('../src/config');
 const ORIGIN = 'https://petgo.netlify.app';
 let sup, supPort, app, base, ana, luis;
 
+function nextDow(dow, from = 3) {
+  for (let i = from; i < from + 8; i++) {
+    const f = plusDays(i);
+    if (new Date(f + 'T00:00:00Z').getUTCDay() === dow) return f;
+  }
+}
 function plusDays(n) {
   const d = new Date(); d.setDate(d.getDate() + n);
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(d);
@@ -225,9 +231,9 @@ test('proveedores: crear negocio, equipo y ofertas; aparecen en el catálogo y s
   const pro = sup.addUser('paseos@x.co');
   const P = api(pro), A = api(ana);
   assert.equal((await P('GET', '/api/business')).body, null);
-  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, horario: 'L-V', descripcion: 'x' })).body.error.code, 'sin_negocio');
-  assert.equal((await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Solo uno', cantidad: 1 })).status, 400);
-  const b = await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Paseos Luna', zona: 'Chapinero', cantidad: 3 });
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, dias: [1, 2, 3, 4, 5, 6], hora_inicio: '08:00', hora_fin: '18:00', descripcion: 'x' })).body.error.code, 'sin_negocio');
+  assert.equal((await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Solo uno', cantidad: 1, direccion: 'x' })).status, 400);
+  const b = await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Paseos Luna', zona: 'Chapinero', cantidad: 3, direccion: 'Cra 7 # 45-10', telefono: '+57 300 123 4567' });
   assert.equal(b.status, 201);
   assert.equal((await P('POST', '/api/business', { tipo: 'individual', nombre: 'Otro' })).status, 409);
 
@@ -237,11 +243,14 @@ test('proveedores: crear negocio, equipo y ofertas; aparecen en el catálogo y s
   assert.equal((await P('GET', '/api/business/workers')).body.length, 1);
   assert.equal((await api(luis)('GET', '/api/business/workers')).body.length, 0);
 
-  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 5, duracion_min: 30, horario: 'x', descripcion: 'x' })).status, 400);
-  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, horario: 'x', descripcion: 'x', rating: 5 })).status, 400);
-  const o = await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 21000, duracion_min: 40, horario: 'Lun–Sáb', descripcion: 'Paseos con cariño' });
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 5, duracion_min: 30, dias: [1, 2, 3, 4, 5, 6], hora_inicio: '08:00', hora_fin: '18:00', descripcion: 'x' })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 20000, duracion_min: 30, dias: [1, 2, 3, 4, 5, 6], hora_inicio: '08:00', hora_fin: '18:00', descripcion: 'x', rating: 5 })).status, 400);
+  const o = await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 21000, duracion_min: 40, dias: [1, 2, 3, 4, 5, 6], hora_inicio: '08:00', hora_fin: '18:00', descripcion: 'Paseos con cariño' });
   assert.equal(o.status, 201);
   assert.equal(o.body.nombre, 'Paseos Luna');
+  assert.equal(o.body.direccion, 'Cra 7 # 45-10');
+  assert.equal(o.body.telefono, '+57 300 123 4567');
+  assert.equal(o.body.horario, 'Lun–Sáb, 8:00 AM – 6:00 PM');
   assert.equal(o.body.rating, 0);
 
   const cat = await api()('GET', '/api/professionals?servicio=paseo');
@@ -249,7 +258,7 @@ test('proveedores: crear negocio, equipo y ofertas; aparecen en el catálogo y s
 
   // un dueño reserva la oferta y el proveedor ve la cita con el nombre del cliente
   const mascota = (await A('POST', '/api/pets', { nombre: 'Rocky' })).body;
-  const fecha = plusDays(3);
+  const fecha = nextDow(1);   // un lunes
   const bk = await A('POST', '/api/bookings', { professional_id: o.body.id, pet_id: mascota.id, fecha, hora: '10:00' });
   assert.equal(bk.status, 201);
   const citas = await P('GET', '/api/business/bookings');
@@ -287,4 +296,71 @@ test('mascotas: editar nombre, raza y foto', async () => {
   assert.equal((await A('PATCH', '/api/pets/' + m.id, { foto_path: ana.id + '/abcdefgh12.jpg' })).status, 200);
   assert.equal((await A('PATCH', '/api/pets/' + m.id, {})).status, 400);
   assert.equal((await api(luis)('PATCH', '/api/pets/' + m.id, { nombre: 'Robado' })).status, 404);
+});
+
+// ---------------- Perfil, horarios, dirección ----------------
+test('negocio: se puede editar (la actualización va con filtro por id) y guarda dirección, teléfono y foto', async () => {
+  const u = sup.addUser('editar@x.co'), P = api(u);
+  await P('POST', '/api/business', { tipo: 'individual', nombre: 'Ana Paseos' });
+  const r = await P('PATCH', '/api/business', { nombre: 'Ana Paseos Bogotá', zona: 'Suba', descripcion: 'Hola', telefono: '3001234567', direccion: 'Calle 1 # 2-3', foto_path: u.id + '/abcdefgh12.jpg' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.nombre, 'Ana Paseos Bogotá');
+  assert.equal(r.body.telefono, '3001234567');
+  assert.equal(r.body.foto_path, u.id + '/abcdefgh12.jpg');
+  assert.equal((await P('PATCH', '/api/business', { telefono: 'abc' })).status, 400);
+  assert.equal((await P('PATCH', '/api/business', { foto_path: 'otro/abcdefgh12.jpg' })).status, 400);
+  assert.equal((await api(sup.addUser('sin@x.co'))('PATCH', '/api/business', { nombre: 'X' })).body.error.code, 'sin_negocio');
+});
+
+test('empresas y baños requieren dirección; horario validado', async () => {
+  const u = sup.addUser('banos@x.co'), P = api(u);
+  assert.equal((await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Sin dirección', cantidad: 2 })).status, 400);
+  await P('POST', '/api/business', { tipo: 'individual', nombre: 'Peluquero' });
+  const base = { servicio: 'bano', precio: 30000, duracion_min: 60, dias: [2, 4], hora_inicio: '09:00', hora_fin: '17:00', descripcion: 'Baños' };
+  assert.equal((await P('POST', '/api/business/offers', base)).body.error.code, 'direccion_requerida');
+  await P('PATCH', '/api/business', { direccion: 'Cll 10 # 5-5' });
+  assert.equal((await P('POST', '/api/business/offers', { ...base, dias: [] })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { ...base, dias: [7] })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { ...base, hora_inicio: '06:00' })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { ...base, hora_inicio: '18:00', hora_fin: '17:00' })).status, 400);
+  assert.equal((await P('POST', '/api/business/offers', { ...base, hora_inicio: '16:30', duracion_min: 60 })).status, 400);
+  const ok = await P('POST', '/api/business/offers', base);
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.horario, 'Mar, Jue, 9:00 AM – 5:00 PM');
+  assert.equal(ok.body.direccion, 'Cll 10 # 5-5');
+});
+
+test('reservas: se respeta el horario del proveedor', async () => {
+  const u = sup.addUser('horario@x.co'), P = api(u), A = api(ana);
+  await P('POST', '/api/business', { tipo: 'individual', nombre: 'Horario Test' });
+  const o = (await P('POST', '/api/business/offers', { servicio: 'paseo', precio: 15000, duracion_min: 60, dias: [1, 3], hora_inicio: '09:00', hora_fin: '12:00', descripcion: 'x' })).body;
+  const mon = nextDow(1), tue = nextDow(2);
+  const pet = (await A('GET', '/api/pets')).body[0] || (await A('POST', '/api/pets', { nombre: 'Tmp' })).body;
+  const book = (fecha, hora) => A('POST', '/api/bookings', { professional_id: o.id, pet_id: pet.id, fecha, hora });
+  assert.equal((await book(tue, '10:00')).body.error.code, 'fuera_de_horario');       // día no laborable
+  assert.equal((await book(mon, '08:00')).body.error.code, 'fuera_de_horario');       // antes de abrir
+  assert.equal((await book(mon, '11:30')).body.error.code, 'fuera_de_horario');       // la sesión terminaría después de cerrar
+  const ok = await book(mon, '11:00');
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.professionals.direccion, '');
+  // reprogramar también respeta el horario
+  assert.equal((await A('PATCH', '/api/bookings/' + ok.body.id, { fecha: tue })).body.error.code, 'fuera_de_horario');
+  assert.equal((await A('PATCH', '/api/bookings/' + ok.body.id, { hora: '09:00' })).status, 200);
+  await A('POST', '/api/bookings/' + ok.body.id + '/cancel');
+});
+
+test('catálogo: el equipo de un negocio es público y las mascotas guardan descripción', async () => {
+  const u = sup.addUser('equipo@x.co'), P = api(u), A = api(ana);
+  await P('POST', '/api/business', { tipo: 'empresa', nombre: 'Equipo SAS', cantidad: 2, direccion: 'Av 1' });
+  const w = await P('POST', '/api/business/workers', { nombre: 'Marta', funcion: 'Bañador', foto_path: u.id + '/fotoequipo1.jpg' });
+  assert.equal(w.status, 201);
+  const o = (await P('POST', '/api/business/offers', { servicio: 'bano', precio: 30000, duracion_min: 60, dias: [1], hora_inicio: '08:00', hora_fin: '12:00', descripcion: 'x' })).body;
+  const pub = await api()('GET', '/api/professionals/' + o.id + '/workers');
+  assert.equal(pub.status, 200);
+  assert.equal(pub.body[0].nombre, 'Marta');
+  assert.equal((await api()('GET', '/api/professionals/nada-nada/workers')).status, 404);
+  const m = await A('POST', '/api/pets', { nombre: 'Dulce', descripcion: 'Muy juguetona, le tiene miedo a los truenos' });
+  assert.equal(m.body.descripcion, 'Muy juguetona, le tiene miedo a los truenos');
+  assert.equal((await A('PATCH', '/api/pets/' + m.body.id, { descripcion: 'x'.repeat(501) })).status, 400);
+  assert.equal((await A('PATCH', '/api/me', { foto_path: ana.id + '/perfilana12.jpg' })).body.foto_path, ana.id + '/perfilana12.jpg');
 });
